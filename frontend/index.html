@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Squeeze Scanner — The Investing Clinic</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <div class="layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <span>The Investing Clinic</span>
+      </div>
+      <nav>
+        <a class="nav-link active" href="#">Squeeze Scanner</a>
+        <a class="nav-link" href="#">Gamma Map</a>
+        <a class="nav-link" href="#">Alerts</a>
+      </nav>
+      <div class="sidebar-footer">
+        <div id="last-scan-time" class="meta">Last scan: —</div>
+        <button id="run-scan-btn" class="btn-primary full-width">Run Scan Now</button>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+
+      <!-- Header -->
+      <header class="page-header">
+        <div>
+          <h1>Where is market structure pressure building?</h1>
+          <p class="subtitle">Scanning for short squeeze setups — unusual options flow, gamma exposure, short interest</p>
+        </div>
+        <div class="header-controls">
+          <input id="search-input" type="text" placeholder="Search ticker…" />
+          <select id="min-score-filter">
+            <option value="0">All scores</option>
+            <option value="40">40+ only</option>
+            <option value="60" selected>60+ only</option>
+            <option value="75">75+ (high conviction)</option>
+          </select>
+        </div>
+      </header>
+
+      <!-- Stats bar -->
+      <div class="stats-bar">
+        <div class="stat-card">
+          <span class="stat-label">Tickers scanned</span>
+          <span class="stat-value" id="stat-total">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">High conviction (75+)</span>
+          <span class="stat-value hot" id="stat-high">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Negative gamma</span>
+          <span class="stat-value" id="stat-neg-gamma">—</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Avg score</span>
+          <span class="stat-value" id="stat-avg">—</span>
+        </div>
+      </div>
+
+      <!-- Scanner table -->
+      <section class="card">
+        <div class="card-header">
+          <h2>Ticker Scanner</h2>
+          <span class="badge" id="result-count">0 results</span>
+        </div>
+        <div class="table-wrapper">
+          <table id="scanner-table">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Score</th>
+                <th>Price</th>
+                <th>Short Int %</th>
+                <th>Float (M)</th>
+                <th>Call Vol Ratio</th>
+                <th>Gamma</th>
+                <th>IV %ile</th>
+                <th>Rel Vol</th>
+                <th>Reddit</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody id="scanner-body">
+              <tr><td colspan="11" class="empty-state">Loading scan results…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Ticker detail panel (hidden until row clicked) -->
+      <section class="card" id="detail-panel" style="display:none">
+        <div class="card-header">
+          <h2 id="detail-title">$TICKER Detail</h2>
+          <button class="btn-ghost" id="close-detail">✕ Close</button>
+        </div>
+        <div class="detail-grid">
+          <div class="detail-col">
+            <h3>Gamma Map</h3>
+            <div class="gamma-table" id="gamma-data"></div>
+          </div>
+          <div class="detail-col">
+            <h3>Volume Zones</h3>
+            <div id="zones-data"></div>
+          </div>
+          <div class="detail-col">
+            <h3>Score Breakdown</h3>
+            <div id="breakdown-data"></div>
+          </div>
+          <div class="detail-col">
+            <h3>Alert Preview</h3>
+            <pre id="alert-preview" class="alert-box"></pre>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

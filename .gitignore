@@ -1,0 +1,27 @@
+# Environment — never commit secrets
+backend/.env
+*.env
+
+# Database
+*.db
+*.db-shm
+*.db-wal
+data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
