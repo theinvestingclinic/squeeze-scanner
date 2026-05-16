@@ -159,7 +159,7 @@
     text-transform: uppercase;
     letter-spacing: .07em;
     color: #a8a09a;
-    padding: 11px 16px;
+    padding: 9px 10px;
     border-bottom: 1px solid #ece4d2;
     white-space: nowrap;
     background: #fdfbf4;
@@ -175,7 +175,7 @@
   .tic-table tbody tr:last-child { border-bottom: none; }
 
   .tic-table td {
-    padding: 11px 16px;
+    padding: 9px 10px;
     white-space: nowrap;
     vertical-align: middle;
   }
@@ -208,6 +208,15 @@
     color: #a8a09a;
     font-size: 14px;
   }
+
+  .tic-table td:nth-child(1) { min-width: 60px; }
+  .tic-table td:nth-child(2) { min-width: 60px; }
+  .tic-table td:nth-child(3) { min-width: 70px; }
+  .tic-table td:nth-child(4) { min-width: 70px; }
+  .tic-table td:nth-child(5) { min-width: 70px; }
+  .tic-table td:nth-child(6) { min-width: 60px; }
+  .tic-table td:nth-child(7) { min-width: 80px; }
+  .tic-table td:nth-child(8) { min-width: 90px; }
 
   /* Detail panel */
   .tic-detail {
@@ -372,13 +381,10 @@
             <th>Score</th>
             <th>Price</th>
             <th>Short Int</th>
-            <th>Float</th>
             <th>Call Vol</th>
             <th>Gamma</th>
             <th>Call Wall</th>
             <th>Zero Gamma</th>
-            <th>Rel Vol</th>
-            <th>Crowd</th>
           </tr>
         </thead>
         <tbody id="tic-tbody">
@@ -487,15 +493,12 @@
         <td>${badge(r.score)}</td>
         <td>$${f(r.price)}</td>
         <td>${r.short_interest_pct > 0 ? r.short_interest_pct+'%' : '<span style="color:#a8a09a">—</span>'}</td>
-        <td>${r.float_shares_m > 0 ? r.float_shares_m+'M' : '<span style="color:#a8a09a">—</span>'}</td>
         <td>${r.call_volume_ratio > 0 ? r.call_volume_ratio+'x' : '—'}</td>
         <td>${r.is_negative_gamma
-          ? '<span class="tic-gamma-neg">⚡ Negative</span>'
-          : '<span class="tic-gamma-pos">Positive</span>'}</td>
+          ? '<span class="tic-gamma-neg">⚡ Neg</span>'
+          : '<span class="tic-gamma-pos">—</span>'}</td>
         <td>${r.call_wall ? '$'+r.call_wall : '—'}</td>
         <td>${r.zero_gamma ? '$'+r.zero_gamma : '—'}</td>
-        <td>${r.relative_volume > 0 ? r.relative_volume+'x' : '—'}</td>
-        <td>${crowd(r.reddit_saturation)}</td>
       </tr>`).join('');
   }
 
