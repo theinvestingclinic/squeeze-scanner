@@ -1,0 +1,306 @@
+<!--
+  The Investing Clinic — Tools Hub
+  Paste into a Ghost PAGE (not post) using an HTML card.
+  Set page visibility to PUBLIC so anyone can see it.
+  Individual tools stay gated at their own pages.
+-->
+
+<style>
+  .tic-hub * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  .tic-hub {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    color: #15171a;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 0 80px;
+  }
+
+  .tic-hub-header {
+    border-bottom: 2px solid #15171a;
+    padding-bottom: 20px;
+    margin-bottom: 40px;
+  }
+
+  .tic-hub-header h1 {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .tic-hub-header p {
+    margin-top: 8px;
+    color: #6c7176;
+    font-size: 15px;
+    max-width: 520px;
+    line-height: 1.5;
+  }
+
+  /* Grid */
+  .tic-hub-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  /* Card */
+  .tic-tool-card {
+    border: 1px solid #e6e6e6;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: border-color .15s, box-shadow .15s;
+  }
+
+  .tic-tool-card:hover {
+    border-color: #15171a;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  }
+
+  .tic-card-top {
+    padding: 24px 24px 20px;
+    flex: 1;
+  }
+
+  .tic-card-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+  }
+
+  .tic-badge-members {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+
+  .tic-badge-live {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+  }
+
+  .tic-badge-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .tic-card-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+    display: block;
+  }
+
+  .tic-card-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    margin-bottom: 8px;
+  }
+
+  .tic-card-desc {
+    font-size: 14px;
+    color: #6c7176;
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+
+  /* Signal pills */
+  .tic-signals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .tic-signal {
+    font-size: 11px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    background: #f9fafb;
+    border: 1px solid #e6e6e6;
+    color: #374151;
+    font-weight: 500;
+  }
+
+  /* Card footer */
+  .tic-card-footer {
+    padding: 16px 24px;
+    border-top: 1px solid #f0f0f0;
+    background: #fafafa;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .tic-card-meta {
+    font-size: 12px;
+    color: #9ba3af;
+  }
+
+  .tic-launch-btn {
+    display: inline-block;
+    background: #15171a;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+    transition: opacity .15s;
+  }
+  .tic-launch-btn:hover { opacity: .8; color: #fff; }
+
+  .tic-launch-btn.locked {
+    background: #e6e6e6;
+    color: #9ba3af;
+    cursor: default;
+  }
+  .tic-launch-btn.locked:hover { opacity: 1; }
+
+  /* Coming soon card */
+  .tic-tool-card.coming-soon {
+    opacity: .6;
+    pointer-events: none;
+  }
+
+  /* Bottom CTA */
+  .tic-cta {
+    margin-top: 40px;
+    background: #15171a;
+    color: #fff;
+    border-radius: 8px;
+    padding: 32px 36px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .tic-cta h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .tic-cta p  { font-size: 14px; color: rgba(255,255,255,.65); line-height: 1.5; }
+
+  .tic-cta-btn {
+    display: inline-block;
+    background: #fff;
+    color: #15171a;
+    border-radius: 5px;
+    padding: 11px 24px;
+    font-size: 14px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: opacity .15s;
+    flex-shrink: 0;
+  }
+  .tic-cta-btn:hover { opacity: .85; color: #15171a; }
+
+  @media (max-width: 640px) {
+    .tic-hub-grid { grid-template-columns: 1fr; }
+    .tic-cta { text-align: center; justify-content: center; }
+  }
+</style>
+
+<div class="tic-hub">
+
+  <div class="tic-hub-header">
+    <h1>Research Tools</h1>
+    <p>Institutional-grade market analysis tools built for The Investing Clinic community. Paid membership required.</p>
+  </div>
+
+  <div class="tic-hub-grid">
+
+    <!-- Squeeze Scanner -->
+    <div class="tic-tool-card">
+      <div class="tic-card-top">
+        <span class="tic-card-badge tic-badge-live">
+          <span class="tic-badge-dot"></span> Live
+        </span>
+        <span class="tic-card-icon">🔥</span>
+        <div class="tic-card-title">Squeeze Scanner</div>
+        <div class="tic-card-desc">
+          Where is market structure pressure building? Scans for short squeeze setups using options flow, gamma exposure, and short interest. Scores every ticker 0–100. Discord alerts fire automatically for high-conviction setups.
+        </div>
+        <div class="tic-signals">
+          <span class="tic-signal">Short interest</span>
+          <span class="tic-signal">Gamma exposure</span>
+          <span class="tic-signal">Call volume</span>
+          <span class="tic-signal">Float size</span>
+          <span class="tic-signal">IV expansion</span>
+          <span class="tic-signal">Dark pool zones</span>
+        </div>
+      </div>
+      <div class="tic-card-footer">
+        <span class="tic-card-meta">Updates every 30 min · Market hours only</span>
+        <a href="/scanner" class="tic-launch-btn">Launch →</a>
+      </div>
+    </div>
+
+    <!-- Whale Watch -->
+    <div class="tic-tool-card">
+      <div class="tic-card-top">
+        <span class="tic-card-badge tic-badge-live">
+          <span class="tic-badge-dot"></span> Live
+        </span>
+        <span class="tic-card-icon">🐋</span>
+        <div class="tic-card-title">Whale Watch</div>
+        <div class="tic-card-desc">
+          Follow the smart money. Track holdings of major fund managers through SEC 13F filings — value, macro, activist, long/short, and quant funds. Filter by strategy, sort by AUM, and see exactly where institutions are positioned.
+        </div>
+        <div class="tic-signals">
+          <span class="tic-signal">13F filings</span>
+          <span class="tic-signal">AUM tracking</span>
+          <span class="tic-signal">Position changes</span>
+          <span class="tic-signal">Fund categories</span>
+          <span class="tic-signal">Portfolio %</span>
+        </div>
+      </div>
+      <div class="tic-card-footer">
+        <span class="tic-card-meta">SEC filings · 45-day reporting lag</span>
+        <a href="https://whales.theinvestingclinic.com" class="tic-launch-btn" target="_blank">Launch →</a>
+      </div>
+    </div>
+
+    <!-- Placeholder: coming soon -->
+    <div class="tic-tool-card coming-soon">
+      <div class="tic-card-top">
+        <span class="tic-card-badge" style="background:#f9fafb;color:#9ba3af;border:1px solid #e6e6e6">
+          Coming soon
+        </span>
+        <span class="tic-card-icon">📊</span>
+        <div class="tic-card-title">More tools in development</div>
+        <div class="tic-card-desc">
+          New tools are added regularly for paid members. Check back soon.
+        </div>
+      </div>
+      <div class="tic-card-footer">
+        <span class="tic-card-meta">In development</span>
+        <span class="tic-launch-btn locked">Coming soon</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CTA for non-members -->
+  <div class="tic-cta">
+    <div>
+      <h2>Access all tools with a membership</h2>
+      <p>All tools are available to paid members. 100% of membership profits donated to kids and schools.</p>
+    </div>
+    <a href="/#/portal/signup" class="tic-cta-btn">Become a member →</a>
+  </div>
+
+</div>
