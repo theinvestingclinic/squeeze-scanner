@@ -1,218 +1,251 @@
 <!--
   The Investing Clinic — Squeeze Scanner
-  Paste this entire block into a Ghost page using an HTML card.
-  Set page visibility to "Paid members" in Ghost admin.
+  Paste into a Ghost PAGE using an HTML card.
+  Set page visibility to Paid members.
 -->
 
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
   .tic-scanner * { box-sizing: border-box; margin: 0; padding: 0; }
 
   .tic-scanner {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-    color: #15171a;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #0a1a2a;
+    background: #fdfbf4;
     max-width: 1100px;
     margin: 0 auto;
-    padding: 0 0 60px;
+    padding: 0 0 80px;
   }
 
+  /* Header */
   .tic-header {
-    border-bottom: 2px solid #15171a;
-    padding-bottom: 20px;
+    padding-bottom: 24px;
     margin-bottom: 32px;
+    border-bottom: 1px solid #d9d0be;
+  }
+
+  .tic-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #a8833d;
+    margin-bottom: 8px;
   }
 
   .tic-header h1 {
-    font-size: 28px;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 36px;
     font-weight: 700;
-    letter-spacing: -0.5px;
+    color: #0a1a2a;
+    letter-spacing: -0.3px;
+    margin-bottom: 6px;
   }
 
-  .tic-header p {
-    margin-top: 6px;
-    color: #6c7176;
-    font-size: 15px;
-  }
+  .tic-header p { font-size: 15px; color: #6e685e; }
 
   .tic-meta {
     display: flex;
     align-items: center;
-    gap: 24px;
+    gap: 20px;
     margin-top: 14px;
-    font-size: 13px;
-    color: #6c7176;
+    font-size: 12px;
+    color: #a8a09a;
     flex-wrap: wrap;
   }
 
-  .tic-meta-dot {
-    width: 8px; height: 8px;
+  .tic-live-dot {
+    width: 7px; height: 7px;
     border-radius: 50%;
-    background: #22c55e;
+    background: #16a34a;
     display: inline-block;
-    margin-right: 6px;
+    margin-right: 5px;
   }
 
-  .tic-meta-dot.scanning { background: #f59e0b; }
+  .tic-live-dot.amber { background: #d97706; }
 
   /* Stats */
   .tic-stats {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 32px;
+    gap: 14px;
+    margin-bottom: 28px;
   }
 
   .tic-stat {
-    border: 1px solid #e6e6e6;
-    border-radius: 6px;
+    background: #fff;
+    border: 1px solid #d9d0be;
+    border-radius: 5px;
     padding: 16px 18px;
   }
 
   .tic-stat-label {
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: .06em;
-    color: #6c7176;
+    letter-spacing: .08em;
+    color: #a8a09a;
     font-weight: 600;
+    margin-bottom: 6px;
   }
 
   .tic-stat-value {
-    font-size: 26px;
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
     font-weight: 700;
-    margin-top: 4px;
-    color: #15171a;
+    color: #0a1a2a;
   }
 
-  .tic-stat-value.alert { color: #dc2626; }
+  .tic-stat-value.hot { color: #b45309; }
 
   /* Controls */
   .tic-controls {
     display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 16px;
     flex-wrap: wrap;
     align-items: center;
   }
 
   .tic-controls input,
   .tic-controls select {
-    border: 1px solid #e6e6e6;
-    border-radius: 5px;
+    border: 1px solid #d9d0be;
+    border-radius: 4px;
     padding: 8px 12px;
     font-size: 13px;
-    color: #15171a;
+    color: #0a1a2a;
     background: #fff;
     outline: none;
     font-family: inherit;
   }
 
   .tic-controls input:focus,
-  .tic-controls select:focus { border-color: #15171a; }
+  .tic-controls select:focus { border-color: #a8833d; }
 
   .tic-btn {
-    border: 1px solid #15171a;
-    background: #15171a;
-    color: #fff;
-    border-radius: 5px;
+    border: 1px solid #0a1a2a;
+    background: #0a1a2a;
+    color: #fdfbf4;
+    border-radius: 4px;
     padding: 8px 16px;
     font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     font-family: inherit;
-    transition: opacity .15s;
+    transition: background .15s;
   }
-  .tic-btn:hover { opacity: .8; }
-  .tic-btn.secondary {
-    background: #fff;
-    color: #15171a;
-  }
+  .tic-btn:hover { background: #a8833d; border-color: #a8833d; }
 
   /* Table */
+  .tic-card {
+    background: #fff;
+    border: 1px solid #d9d0be;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
   .tic-table-wrap { overflow-x: auto; }
 
   table.tic-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .tic-table thead th {
     text-align: left;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .05em;
-    color: #6c7176;
-    padding: 10px 14px;
-    border-bottom: 2px solid #e6e6e6;
+    letter-spacing: .07em;
+    color: #a8a09a;
+    padding: 11px 16px;
+    border-bottom: 1px solid #ece4d2;
     white-space: nowrap;
-    background: #fff;
+    background: #fdfbf4;
   }
 
   .tic-table tbody tr {
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f6f1e4;
     cursor: pointer;
     transition: background .1s;
   }
 
-  .tic-table tbody tr:hover { background: #f9f9f9; }
+  .tic-table tbody tr:hover { background: #fdf8f0; }
+  .tic-table tbody tr:last-child { border-bottom: none; }
 
   .tic-table td {
-    padding: 12px 14px;
+    padding: 11px 16px;
     white-space: nowrap;
     vertical-align: middle;
   }
 
-  .tic-ticker-name { font-weight: 700; font-size: 15px; }
+  .tic-ticker { font-weight: 700; font-size: 14px; font-family: 'IBM Plex Mono', monospace; }
 
-  /* Score badge */
+  /* Score */
   .tic-score {
     display: inline-block;
-    padding: 3px 10px;
-    border-radius: 20px;
+    padding: 2px 10px;
+    border-radius: 3px;
     font-weight: 700;
     font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
   }
-  .tic-score-hot  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+  .tic-score-hot  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
   .tic-score-high { background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa; }
-  .tic-score-mid  { background: #fefce8; color: #92400e; border: 1px solid #fde68a; }
-  .tic-score-low  { background: #f9fafb; color: #6c7176; border: 1px solid #e6e6e6; }
+  .tic-score-mid  { background: #f6f1e4; color: #6e685e; border: 1px solid #ece4d2; }
+  .tic-score-low  { background: #f9fafb; color: #a8a09a; border: 1px solid #e5e7eb; }
 
-  .tic-gamma-neg { color: #c2410c; font-weight: 600; font-size: 13px; }
-  .tic-gamma-pos { color: #6c7176; font-size: 13px; }
-  .tic-reddit-hot  { color: #dc2626; font-size: 13px; }
-  .tic-reddit-warm { color: #d97706; font-size: 13px; }
-  .tic-reddit-ok   { color: #16a34a; font-size: 13px; }
+  .tic-gamma-neg { color: #b45309; font-weight: 600; }
+  .tic-gamma-pos { color: #a8a09a; }
+  .tic-crowd-hot  { color: #dc2626; }
+  .tic-crowd-warm { color: #d97706; }
+  .tic-crowd-ok   { color: #16a34a; }
+
+  .tic-empty {
+    text-align: center;
+    padding: 52px 20px;
+    color: #a8a09a;
+    font-size: 14px;
+  }
 
   /* Detail panel */
   .tic-detail {
-    margin-top: 32px;
-    border: 1px solid #e6e6e6;
-    border-radius: 8px;
+    margin-top: 20px;
+    background: #fff;
+    border: 1px solid #d9d0be;
+    border-radius: 6px;
     overflow: hidden;
     display: none;
   }
 
   .tic-detail-header {
-    background: #15171a;
-    color: #fff;
-    padding: 16px 20px;
+    background: #0a1a2a;
+    color: #fdfbf4;
+    padding: 16px 24px;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .tic-detail-header h2 { font-size: 17px; font-weight: 700; }
+  .tic-detail-header h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 700;
+  }
 
-  .tic-detail-close {
+  .tic-close-btn {
     background: transparent;
-    border: 1px solid rgba(255,255,255,.3);
-    color: #fff;
+    border: 1px solid rgba(255,255,255,.25);
+    color: rgba(255,255,255,.7);
     border-radius: 4px;
     padding: 4px 10px;
     cursor: pointer;
     font-size: 12px;
     font-family: inherit;
+    transition: border-color .15s;
   }
+  .tic-close-btn:hover { border-color: rgba(255,255,255,.6); color: #fff; }
 
   .tic-detail-body {
     padding: 24px;
@@ -222,155 +255,148 @@
   }
 
   .tic-detail-col h3 {
-    font-size: 11px;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: .06em;
-    color: #6c7176;
+    letter-spacing: .08em;
+    color: #a8a09a;
     font-weight: 700;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     padding-bottom: 8px;
-    border-bottom: 1px solid #e6e6e6;
+    border-bottom: 1px solid #ece4d2;
   }
 
-  .tic-kv { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f5f5f5; font-size: 13px; }
+  .tic-kv { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid #f6f1e4; font-size: 13px; }
   .tic-kv:last-child { border-bottom: none; }
-  .tic-kv-label { color: #6c7176; }
-  .tic-kv-value { font-weight: 600; }
+  .tic-kv-k { color: #6e685e; }
+  .tic-kv-v { font-weight: 600; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
 
   .tic-zone {
-    background: #f9fafb;
-    border: 1px solid #e6e6e6;
-    border-radius: 5px;
+    background: #f6f1e4;
+    border: 1px solid #ece4d2;
+    border-radius: 4px;
     padding: 8px 12px;
     font-size: 13px;
     display: flex;
     justify-content: space-between;
     margin-bottom: 6px;
   }
-  .tic-zone-range { font-weight: 700; }
-  .tic-zone-pct { color: #6c7176; }
+  .tic-zone-range { font-weight: 700; font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+  .tic-zone-pct { color: #6e685e; font-size: 12px; }
 
   .tic-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; }
-  .tic-bar-label { width: 120px; color: #6c7176; flex-shrink: 0; }
-  .tic-bar-bg { flex: 1; height: 5px; background: #f0f0f0; border-radius: 3px; overflow: hidden; }
-  .tic-bar-fill { height: 100%; border-radius: 3px; background: #15171a; }
+  .tic-bar-lbl { width: 120px; color: #6e685e; flex-shrink: 0; }
+  .tic-bar-bg { flex: 1; height: 4px; background: #ece4d2; border-radius: 2px; overflow: hidden; }
+  .tic-bar-fill { height: 100%; border-radius: 2px; background: #a8833d; }
   .tic-bar-fill.neg { background: #dc2626; }
-  .tic-bar-pts { width: 30px; text-align: right; font-weight: 700; }
+  .tic-bar-pts { width: 30px; text-align: right; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
 
-  .tic-alert-box {
-    background: #f9fafb;
-    border: 1px solid #e6e6e6;
-    border-radius: 5px;
-    padding: 14px;
+  .tic-alert-preview {
+    background: #0a1a2a;
+    color: #d9c289;
+    border-radius: 4px;
+    padding: 16px;
     font-size: 12px;
     line-height: 1.7;
     white-space: pre-wrap;
     word-break: break-word;
-    font-family: 'Courier New', monospace;
-    color: #15171a;
+    font-family: 'IBM Plex Mono', monospace;
     max-height: 280px;
     overflow-y: auto;
   }
 
   .tic-disclaimer {
-    margin-top: 40px;
+    margin-top: 36px;
     padding-top: 20px;
-    border-top: 1px solid #e6e6e6;
+    border-top: 1px solid #ece4d2;
     font-size: 12px;
-    color: #9ba3af;
+    color: #a8a09a;
     line-height: 1.6;
   }
-
-  .tic-empty {
-    text-align: center;
-    padding: 48px 20px;
-    color: #6c7176;
-    font-size: 14px;
-  }
-
-  .tic-loading { color: #6c7176; }
 
   @media (max-width: 700px) {
     .tic-stats { grid-template-columns: repeat(2, 1fr); }
     .tic-detail-body { grid-template-columns: 1fr; }
+    .tic-header h1 { font-size: 26px; }
   }
 </style>
 
-<div class="tic-scanner" id="tic-root">
+<div class="tic-scanner">
 
   <div class="tic-header">
-    <h1>Squeeze Scanner</h1>
-    <p>Where is market structure pressure building?</p>
+    <div class="tic-eyebrow">Live · Squeeze Scanner</div>
+    <h1>Where is market structure pressure building?</h1>
+    <p>Unusual options flow, gamma exposure, and short interest — scored and ranked in real time.</p>
     <div class="tic-meta">
-      <span><span class="tic-meta-dot" id="tic-status-dot"></span><span id="tic-status-text">Loading…</span></span>
+      <span><span class="tic-live-dot" id="tic-dot"></span><span id="tic-status">Loading…</span></span>
       <span id="tic-last-scan"></span>
-      <span>Short data refreshes bi-weekly · Scores update every 30 min during market hours</span>
+      <span>Short data refreshes bi-weekly · Scans every 30 min during market hours</span>
     </div>
   </div>
 
   <div class="tic-stats">
     <div class="tic-stat">
       <div class="tic-stat-label">Tickers scanned</div>
-      <div class="tic-stat-value" id="tic-stat-total">—</div>
+      <div class="tic-stat-value" id="tic-total">—</div>
     </div>
     <div class="tic-stat">
       <div class="tic-stat-label">High conviction (75+)</div>
-      <div class="tic-stat-value alert" id="tic-stat-hot">—</div>
+      <div class="tic-stat-value hot" id="tic-hot">—</div>
     </div>
     <div class="tic-stat">
       <div class="tic-stat-label">Negative gamma</div>
-      <div class="tic-stat-value" id="tic-stat-gamma">—</div>
+      <div class="tic-stat-value" id="tic-neg">—</div>
     </div>
     <div class="tic-stat">
       <div class="tic-stat-label">Avg score</div>
-      <div class="tic-stat-value" id="tic-stat-avg">—</div>
+      <div class="tic-stat-value" id="tic-avg">—</div>
     </div>
   </div>
 
   <div class="tic-controls">
-    <input type="text" id="tic-search" placeholder="Search ticker…" style="width:160px" />
+    <input type="text" id="tic-search" placeholder="Search ticker…" style="width:150px" />
     <select id="tic-filter">
       <option value="0">All scores</option>
       <option value="40">40+ only</option>
       <option value="60" selected>60+ only</option>
-      <option value="75">High conviction only (75+)</option>
+      <option value="75">High conviction (75+)</option>
     </select>
-    <button class="tic-btn secondary" id="tic-refresh-btn">↻ Refresh</button>
+    <button class="tic-btn" id="tic-refresh">↻ Refresh</button>
   </div>
 
-  <div class="tic-table-wrap">
-    <table class="tic-table">
-      <thead>
-        <tr>
-          <th>Ticker</th>
-          <th>Score</th>
-          <th>Price</th>
-          <th>Short Int</th>
-          <th>Float</th>
-          <th>Call Vol</th>
-          <th>Gamma</th>
-          <th>Call Wall</th>
-          <th>Zero Gamma</th>
-          <th>Rel Vol</th>
-          <th>Crowd</th>
-        </tr>
-      </thead>
-      <tbody id="tic-tbody">
-        <tr><td colspan="11" class="tic-empty tic-loading">Loading scan results…</td></tr>
-      </tbody>
-    </table>
+  <div class="tic-card">
+    <div class="tic-table-wrap">
+      <table class="tic-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Score</th>
+            <th>Price</th>
+            <th>Short Int</th>
+            <th>Float</th>
+            <th>Call Vol</th>
+            <th>Gamma</th>
+            <th>Call Wall</th>
+            <th>Zero Gamma</th>
+            <th>Rel Vol</th>
+            <th>Crowd</th>
+          </tr>
+        </thead>
+        <tbody id="tic-tbody">
+          <tr><td colspan="11" class="tic-empty">Loading scan results…</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
-  <!-- Detail panel -->
   <div class="tic-detail" id="tic-detail">
     <div class="tic-detail-header">
       <h2 id="tic-detail-title">Detail</h2>
-      <button class="tic-detail-close" id="tic-detail-close">✕ Close</button>
+      <button class="tic-close-btn" id="tic-close">✕ Close</button>
     </div>
     <div class="tic-detail-body">
       <div class="tic-detail-col">
         <h3>Gamma Map</h3>
-        <div id="tic-gamma-map"></div>
+        <div id="tic-gamma"></div>
       </div>
       <div class="tic-detail-col">
         <h3>Volume Zones</h3>
@@ -381,27 +407,27 @@
         <div id="tic-breakdown"></div>
       </div>
       <div class="tic-detail-col">
-        <h3>Alert Preview</h3>
-        <pre class="tic-alert-box" id="tic-alert-preview"></pre>
+        <h3>Discord Alert Preview</h3>
+        <pre class="tic-alert-preview" id="tic-alert"></pre>
       </div>
     </div>
   </div>
 
   <div class="tic-disclaimer">
-    <strong>Not financial advice.</strong> The Investing Clinic squeeze scanner surfaces structural signals — short interest, options flow, and gamma positioning — as an educational research tool. Scores are calculated from publicly available data. Always do your own research before making any investment decisions. Short interest data is reported bi-weekly and may not reflect current positions.
+    <strong>Not financial advice.</strong> The Investing Clinic squeeze scanner surfaces structural signals as an educational research tool. Scores are calculated from publicly available data. Short interest data is reported bi-weekly and may not reflect current positions. Always conduct your own research before making investment decisions.
   </div>
+
 </div>
 
 <script>
 (function() {
   const API = 'https://squeeze-scanner-production.up.railway.app';
-  let allResults = [];
+  let all = [];
 
-  // ── Boot ────────────────────────────────────────────────────────────────
   load();
   setInterval(load, 60000);
-  document.getElementById('tic-refresh-btn').addEventListener('click', load);
-  document.getElementById('tic-detail-close').addEventListener('click', closeDetail);
+  document.getElementById('tic-refresh').addEventListener('click', load);
+  document.getElementById('tic-close').addEventListener('click', closeDetail);
   document.getElementById('tic-search').addEventListener('input', render);
   document.getElementById('tic-filter').addEventListener('change', render);
 
@@ -409,76 +435,71 @@
     setStatus('scanning');
     try {
       const res = await fetch(API + '/api/scan?limit=100&min_score=0');
-      if (!res.ok) throw new Error(res.statusText);
+      if (!res.ok) throw new Error();
       const data = await res.json();
-      allResults = data.results || [];
+      all = data.results || [];
       setStatus('live');
       renderStats();
       render();
-      if (allResults.length && allResults[0].scanned_at) {
-        const d = new Date(allResults[0].scanned_at + 'Z');
+      if (all.length && all[0].scanned_at) {
+        const d = new Date(all[0].scanned_at + 'Z');
         document.getElementById('tic-last-scan').textContent =
           'Last scan: ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
       }
-    } catch(e) {
+    } catch {
       setStatus('error');
       document.getElementById('tic-tbody').innerHTML =
         '<tr><td colspan="11" class="tic-empty" style="color:#dc2626">Could not reach scanner. Try refreshing.</td></tr>';
     }
   }
 
-  function setStatus(state) {
-    const dot = document.getElementById('tic-status-dot');
-    const txt = document.getElementById('tic-status-text');
-    if (state === 'live')     { dot.className='tic-meta-dot'; txt.textContent='Live'; }
-    if (state === 'scanning') { dot.className='tic-meta-dot scanning'; txt.textContent='Updating…'; }
-    if (state === 'error')    { dot.className='tic-meta-dot'; dot.style.background='#dc2626'; txt.textContent='Offline'; }
+  function setStatus(s) {
+    const dot = document.getElementById('tic-dot');
+    const txt = document.getElementById('tic-status');
+    if (s === 'live')     { dot.className='tic-live-dot'; txt.textContent='Live'; }
+    if (s === 'scanning') { dot.className='tic-live-dot amber'; txt.textContent='Updating…'; }
+    if (s === 'error')    { dot.style.background='#dc2626'; txt.textContent='Offline'; }
   }
 
-  // ── Stats ────────────────────────────────────────────────────────────────
   function renderStats() {
-    const total = allResults.length;
-    const hot   = allResults.filter(r => r.score >= 75).length;
-    const neg   = allResults.filter(r => r.is_negative_gamma).length;
-    const avg   = total ? (allResults.reduce((s,r) => s+r.score, 0)/total).toFixed(1) : '—';
-    document.getElementById('tic-stat-total').textContent = total;
-    document.getElementById('tic-stat-hot').textContent   = hot;
-    document.getElementById('tic-stat-gamma').textContent = neg;
-    document.getElementById('tic-stat-avg').textContent   = avg;
+    const n   = all.length;
+    const hot = all.filter(r => r.score >= 75).length;
+    const neg = all.filter(r => r.is_negative_gamma).length;
+    const avg = n ? (all.reduce((s,r)=>s+r.score,0)/n).toFixed(1) : '—';
+    document.getElementById('tic-total').textContent = n;
+    document.getElementById('tic-hot').textContent   = hot;
+    document.getElementById('tic-neg').textContent   = neg;
+    document.getElementById('tic-avg').textContent   = avg;
   }
 
-  // ── Table ────────────────────────────────────────────────────────────────
   function render() {
-    const q    = document.getElementById('tic-search').value.trim().toUpperCase();
-    const min  = parseFloat(document.getElementById('tic-filter').value) || 0;
-    const rows = allResults.filter(r => r.score >= min && (!q || r.ticker.includes(q)));
-
+    const q   = document.getElementById('tic-search').value.trim().toUpperCase();
+    const min = parseFloat(document.getElementById('tic-filter').value) || 0;
+    const rows = all.filter(r => r.score >= min && (!q || r.ticker.includes(q)));
     const tbody = document.getElementById('tic-tbody');
     if (!rows.length) {
       tbody.innerHTML = '<tr><td colspan="11" class="tic-empty">No results match your filters.</td></tr>';
       return;
     }
-
     tbody.innerHTML = rows.map(r => `
-      <tr onclick="ticOpenDetail('${r.ticker}')">
-        <td class="tic-ticker-name">${r.ticker}</td>
-        <td>${scoreBadge(r.score)}</td>
+      <tr onclick="ticDetail('${r.ticker}')">
+        <td class="tic-ticker">${r.ticker}</td>
+        <td>${badge(r.score)}</td>
         <td>$${f(r.price)}</td>
-        <td>${r.short_interest_pct > 0 ? r.short_interest_pct + '%' : '<span style="color:#9ba3af">N/A</span>'}</td>
-        <td>${r.float_shares_m > 0 ? r.float_shares_m + 'M' : '<span style="color:#9ba3af">—</span>'}</td>
-        <td>${r.call_volume_ratio > 0 ? r.call_volume_ratio + 'x' : '—'}</td>
+        <td>${r.short_interest_pct > 0 ? r.short_interest_pct+'%' : '<span style="color:#a8a09a">—</span>'}</td>
+        <td>${r.float_shares_m > 0 ? r.float_shares_m+'M' : '<span style="color:#a8a09a">—</span>'}</td>
+        <td>${r.call_volume_ratio > 0 ? r.call_volume_ratio+'x' : '—'}</td>
         <td>${r.is_negative_gamma
           ? '<span class="tic-gamma-neg">⚡ Negative</span>'
           : '<span class="tic-gamma-pos">Positive</span>'}</td>
         <td>${r.call_wall ? '$'+r.call_wall : '—'}</td>
         <td>${r.zero_gamma ? '$'+r.zero_gamma : '—'}</td>
         <td>${r.relative_volume > 0 ? r.relative_volume+'x' : '—'}</td>
-        <td>${crowdBadge(r.reddit_saturation)}</td>
-      </tr>
-    `).join('');
+        <td>${crowd(r.reddit_saturation)}</td>
+      </tr>`).join('');
   }
 
-  function scoreBadge(s) {
+  function badge(s) {
     let c = 'tic-score-low';
     if (s >= 75) c = 'tic-score-hot';
     else if (s >= 60) c = 'tic-score-high';
@@ -486,86 +507,75 @@
     return `<span class="tic-score ${c}">${s}</span>`;
   }
 
-  function crowdBadge(sat) {
-    if (sat >= 0.8) return '<span class="tic-reddit-hot">🔥 Crowded</span>';
-    if (sat >= 0.4) return '<span class="tic-reddit-warm">⚠ Warm</span>';
-    return '<span class="tic-reddit-ok">✓ Clear</span>';
+  function crowd(sat) {
+    if (sat >= 0.8) return '<span class="tic-crowd-hot">🔥 Crowded</span>';
+    if (sat >= 0.4) return '<span class="tic-crowd-warm">⚠ Warm</span>';
+    return '<span class="tic-crowd-ok">✓ Clear</span>';
   }
 
-  // ── Detail ───────────────────────────────────────────────────────────────
-  window.ticOpenDetail = async function(ticker) {
-    const data = allResults.find(r => r.ticker === ticker);
-    if (!data) return;
+  window.ticDetail = function(ticker) {
+    const d = all.find(r => r.ticker === ticker);
+    if (!d) return;
+    document.getElementById('tic-detail-title').textContent = '$' + ticker + ' — Score ' + d.score + '/100';
 
-    document.getElementById('tic-detail-title').textContent =
-      '$' + ticker + ' — Score ' + data.score + '/100';
-
-    // Gamma map
-    document.getElementById('tic-gamma-map').innerHTML = [
-      ['Current price',  '$' + f(data.price)],
-      ['Call wall',      data.call_wall  ? '$' + data.call_wall  : 'N/A'],
-      ['Put wall',       data.put_wall   ? '$' + data.put_wall   : 'N/A'],
-      ['Zero gamma',     data.zero_gamma ? '$' + data.zero_gamma : 'N/A'],
-      ['Environment',    data.is_negative_gamma ? '⚡ Negative (squeeze fuel)' : 'Positive (stabilising)'],
-      ['IV percentile',  data.iv_percentile ? data.iv_percentile + '%' : '—'],
+    document.getElementById('tic-gamma').innerHTML = [
+      ['Price',       '$'+f(d.price)],
+      ['Call wall',   d.call_wall  ? '$'+d.call_wall  : 'N/A'],
+      ['Put wall',    d.put_wall   ? '$'+d.put_wall   : 'N/A'],
+      ['Zero gamma',  d.zero_gamma ? '$'+d.zero_gamma : 'N/A'],
+      ['Environment', d.is_negative_gamma ? '⚡ Negative' : 'Positive'],
+      ['IV %ile',     d.iv_percentile ? d.iv_percentile+'%' : '—'],
     ].map(([k,v]) =>
-      `<div class="tic-kv"><span class="tic-kv-label">${k}</span><span class="tic-kv-value">${v}</span></div>`
+      `<div class="tic-kv"><span class="tic-kv-k">${k}</span><span class="tic-kv-v">${v}</span></div>`
     ).join('');
 
-    // Volume zones
-    const zones = data.volume_zones || [];
+    const zones = d.volume_zones || [];
     document.getElementById('tic-zones').innerHTML = zones.length
-      ? '<p style="font-size:11px;color:#9ba3af;margin-bottom:10px">30-day volume accumulation zones</p>' +
-        zones.map(z =>
-          `<div class="tic-zone"><span class="tic-zone-range">$${z.low} – $${z.high}</span><span class="tic-zone-pct">${z.volume_pct}% of vol</span></div>`
-        ).join('')
-      : '<p style="font-size:13px;color:#9ba3af">No significant zones detected.</p>';
+      ? '<p style="font-size:11px;color:#a8a09a;margin-bottom:10px">30-day volume accumulation zones</p>'
+        + zones.map(z =>
+            `<div class="tic-zone"><span class="tic-zone-range">$${z.low} – $${z.high}</span><span class="tic-zone-pct">${z.volume_pct}% of vol</span></div>`
+          ).join('')
+      : '<p style="font-size:13px;color:#a8a09a">No significant zones detected.</p>';
 
-    // Breakdown
-    const bd = data.score_breakdown || {};
-    const maxPts = { short_interest:20, float:10, price_trend:10, call_volume:15, gamma:12, call_oi_buildup:10, iv_expansion:8, level_break:8, relative_volume:7, reddit_danger:15 };
-    const labels = { short_interest:'Short interest', float:'Float size', price_trend:'Price trend', call_volume:'Call volume', gamma:'Gamma', call_oi_buildup:'Call OI buildup', iv_expansion:'IV expansion', level_break:'Level break', relative_volume:'Rel volume', reddit_danger:'Reddit danger' };
+    const bd = d.score_breakdown || {};
+    const maxPts = {short_interest:20,float:10,price_trend:10,call_volume:15,gamma:12,call_oi_buildup:10,iv_expansion:8,level_break:8,relative_volume:7,reddit_danger:15};
+    const labels = {short_interest:'Short interest',float:'Float',price_trend:'Price trend',call_volume:'Call volume',gamma:'Gamma',call_oi_buildup:'Call OI',iv_expansion:'IV expansion',level_break:'Level break',relative_volume:'Rel volume',reddit_danger:'Reddit danger'};
     document.getElementById('tic-breakdown').innerHTML = Object.entries(bd)
       .filter(([k]) => k !== 'total')
-      .map(([k, pts]) => {
-        const max = maxPts[k] || 10;
-        const pct = Math.min(Math.abs(pts)/max*100, 100);
+      .map(([k,pts]) => {
+        const pct = Math.min(Math.abs(pts)/(maxPts[k]||10)*100, 100);
         const neg = pts < 0;
         return `<div class="tic-bar-row">
-          <span class="tic-bar-label">${labels[k]||k}</span>
+          <span class="tic-bar-lbl">${labels[k]||k}</span>
           <div class="tic-bar-bg"><div class="tic-bar-fill${neg?' neg':''}" style="width:${pct}%"></div></div>
-          <span class="tic-bar-pts" style="color:${neg?'#dc2626':'#15171a'}">${pts>0?'+':''}${pts}</span>
+          <span class="tic-bar-pts" style="color:${neg?'#dc2626':'#0a1a2a'}">${pts>0?'+':''}${pts}</span>
         </div>`;
       }).join('');
 
-    // Alert preview
-    const trigger = data.price ? '$'+(data.price*1.03).toFixed(2) : 'N/A';
-    const risk    = data.price ? '$'+(data.price*0.95).toFixed(2) : 'N/A';
+    const trigger = d.price ? '$'+(d.price*1.03).toFixed(2) : 'N/A';
+    const risk    = d.price ? '$'+(d.price*0.95).toFixed(2) : 'N/A';
     const zoneStr = zones.length ? '\nVolume zone: $'+zones[0].low+' – $'+zones[0].high : '';
-    document.getElementById('tic-alert-preview').textContent =
+    document.getElementById('tic-alert').textContent =
 `🔥 Squeeze Radar Alert
 
-$${ticker} score: ${data.score}/100
+$${ticker} score: ${d.score}/100
 
-Short interest: ${data.short_interest_pct||'?'}% float
-Float: ${data.float_shares_m||'?'}M shares
-Call volume: ${data.call_volume_ratio||'?'}x normal
-Gamma: ${data.is_negative_gamma?'Negative (squeeze fuel)':'Positive'}
-Call wall: ${data.call_wall?'$'+data.call_wall:'N/A'}
-Zero gamma: ${data.zero_gamma?'$'+data.zero_gamma:'N/A'}${zoneStr}
+Short interest: ${d.short_interest_pct||'?'}% float
+Float: ${d.float_shares_m||'?'}M shares
+Call volume: ${d.call_volume_ratio||'?'}x normal
+Gamma: ${d.is_negative_gamma?'Negative (squeeze fuel)':'Positive'}
+Call wall: ${d.call_wall?'$'+d.call_wall:'N/A'}
+Zero gamma: ${d.zero_gamma?'$'+d.zero_gamma:'N/A'}${zoneStr}
 
 Trigger: break above ${trigger} with volume
 Risk: failed breakout under ${risk}`;
 
     const panel = document.getElementById('tic-detail');
     panel.style.display = 'block';
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    panel.scrollIntoView({behavior:'smooth', block:'start'});
   };
 
-  function closeDetail() {
-    document.getElementById('tic-detail').style.display = 'none';
-  }
-
+  function closeDetail() { document.getElementById('tic-detail').style.display = 'none'; }
   function f(n) { return n ? parseFloat(n).toFixed(2) : '—'; }
 })();
 </script>

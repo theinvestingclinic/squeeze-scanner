@@ -1,39 +1,54 @@
 <!--
   The Investing Clinic — Tools Hub
-  Paste into a Ghost PAGE (not post) using an HTML card.
-  Set page visibility to PUBLIC so anyone can see it.
-  Individual tools stay gated at their own pages.
+  Paste into a Ghost PAGE using an HTML card.
+  Set page visibility to PUBLIC.
 -->
 
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+
   .tic-hub * { box-sizing: border-box; margin: 0; padding: 0; }
 
   .tic-hub {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-    color: #15171a;
+    font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: #0a1a2a;
+    background: #fdfbf4;
     max-width: 960px;
     margin: 0 auto;
     padding: 0 0 80px;
   }
 
+  /* Header */
   .tic-hub-header {
-    border-bottom: 2px solid #15171a;
-    padding-bottom: 20px;
+    padding-bottom: 28px;
     margin-bottom: 40px;
+    border-bottom: 1px solid #d9d0be;
+  }
+
+  .tic-hub-eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #a8833d;
+    margin-bottom: 10px;
   }
 
   .tic-hub-header h1 {
-    font-size: 28px;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 40px;
     font-weight: 700;
     letter-spacing: -0.5px;
+    line-height: 1.1;
+    color: #0a1a2a;
+    margin-bottom: 12px;
   }
 
   .tic-hub-header p {
-    margin-top: 8px;
-    color: #6c7176;
-    font-size: 15px;
-    max-width: 520px;
-    line-height: 1.5;
+    color: #6e685e;
+    font-size: 16px;
+    line-height: 1.6;
+    max-width: 500px;
   }
 
   /* Grid */
@@ -41,198 +56,247 @@
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 20px;
+    margin-bottom: 40px;
   }
 
   /* Card */
   .tic-tool-card {
-    border: 1px solid #e6e6e6;
-    border-radius: 8px;
-    overflow: hidden;
+    background: #ffffff;
+    border: 1px solid #d9d0be;
+    border-radius: 6px;
     display: flex;
     flex-direction: column;
-    transition: border-color .15s, box-shadow .15s;
+    transition: box-shadow .2s, border-color .2s;
   }
 
   .tic-tool-card:hover {
-    border-color: #15171a;
-    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    box-shadow: 0 4px 20px -8px rgba(10,26,42,.12);
+    border-color: #a8833d;
   }
 
-  .tic-card-top {
-    padding: 24px 24px 20px;
+  .tic-tool-card.dimmed {
+    opacity: .55;
+    pointer-events: none;
+  }
+
+  .tic-card-body {
+    padding: 28px 28px 24px;
     flex: 1;
   }
 
-  .tic-card-badge {
+  /* Status badge */
+  .tic-badge {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 11px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .08em;
     text-transform: uppercase;
-    letter-spacing: .06em;
     padding: 3px 10px;
     border-radius: 20px;
-    margin-bottom: 14px;
-  }
-
-  .tic-badge-members {
-    background: #fef2f2;
-    color: #dc2626;
-    border: 1px solid #fecaca;
+    margin-bottom: 18px;
   }
 
   .tic-badge-live {
     background: #f0fdf4;
-    color: #16a34a;
+    color: #1a3d2e;
     border: 1px solid #bbf7d0;
   }
 
+  .tic-badge-soon {
+    background: #f6f1e4;
+    color: #6e685e;
+    border: 1px solid #d9d0be;
+  }
+
   .tic-badge-dot {
-    width: 6px; height: 6px;
+    width: 5px; height: 5px;
     border-radius: 50%;
     background: currentColor;
   }
 
+  /* Icon */
   .tic-card-icon {
-    font-size: 28px;
-    margin-bottom: 12px;
+    font-size: 30px;
     display: block;
+    margin-bottom: 14px;
+    line-height: 1;
   }
 
+  /* Title */
   .tic-card-title {
-    font-size: 20px;
+    font-family: 'Fraunces', 'Times New Roman', serif;
+    font-size: 22px;
     font-weight: 700;
-    letter-spacing: -0.3px;
-    margin-bottom: 8px;
+    color: #0a1a2a;
+    margin-bottom: 10px;
+    line-height: 1.2;
+  }
+
+  .tic-card-question {
+    font-size: 13px;
+    font-style: italic;
+    color: #a8833d;
+    margin-bottom: 10px;
+    font-family: 'Fraunces', serif;
   }
 
   .tic-card-desc {
     font-size: 14px;
-    color: #6c7176;
-    line-height: 1.6;
-    margin-bottom: 18px;
+    color: #6e685e;
+    line-height: 1.65;
+    margin-bottom: 20px;
   }
 
-  /* Signal pills */
+  /* Signal tags */
   .tic-signals {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 4px;
   }
 
   .tic-signal {
     font-size: 11px;
     padding: 3px 9px;
-    border-radius: 20px;
-    background: #f9fafb;
-    border: 1px solid #e6e6e6;
-    color: #374151;
+    border-radius: 3px;
+    background: #f6f1e4;
+    border: 1px solid #ece4d2;
+    color: #2a3a4a;
     font-weight: 500;
   }
 
   /* Card footer */
   .tic-card-footer {
-    padding: 16px 24px;
-    border-top: 1px solid #f0f0f0;
-    background: #fafafa;
+    padding: 16px 28px;
+    border-top: 1px solid #ece4d2;
+    background: #fdfbf4;
+    border-radius: 0 0 6px 6px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
   }
 
   .tic-card-meta {
     font-size: 12px;
-    color: #9ba3af;
+    color: #a8a09a;
   }
 
-  .tic-launch-btn {
+  /* Launch button */
+  .tic-launch {
     display: inline-block;
-    background: #15171a;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
+    background: #0a1a2a;
+    color: #fdfbf4;
+    border-radius: 4px;
     padding: 9px 20px;
     font-size: 13px;
     font-weight: 600;
-    cursor: pointer;
     text-decoration: none;
-    font-family: inherit;
-    transition: opacity .15s;
+    font-family: 'IBM Plex Sans', sans-serif;
+    letter-spacing: .01em;
+    transition: background .15s;
+    white-space: nowrap;
   }
-  .tic-launch-btn:hover { opacity: .8; color: #fff; }
+  .tic-launch:hover { background: #a8833d; color: #fff; }
 
-  .tic-launch-btn.locked {
-    background: #e6e6e6;
-    color: #9ba3af;
-    cursor: default;
-  }
-  .tic-launch-btn.locked:hover { opacity: 1; }
-
-  /* Coming soon card */
-  .tic-tool-card.coming-soon {
-    opacity: .6;
+  .tic-launch.disabled {
+    background: #ece4d2;
+    color: #a8a09a;
     pointer-events: none;
   }
 
-  /* Bottom CTA */
+  /* Gold rule divider */
+  .tic-divider {
+    height: 1px;
+    background: linear-gradient(to right, #a8833d, #d9c289, #a8833d);
+    margin: 40px 0;
+    opacity: .4;
+  }
+
+  /* CTA */
   .tic-cta {
-    margin-top: 40px;
-    background: #15171a;
-    color: #fff;
-    border-radius: 8px;
-    padding: 32px 36px;
+    background: #f6f1e4;
+    border: 1px solid #d9d0be;
+    border-radius: 6px;
+    padding: 36px 40px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 24px;
+    gap: 32px;
     flex-wrap: wrap;
   }
 
-  .tic-cta h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
-  .tic-cta p  { font-size: 14px; color: rgba(255,255,255,.65); line-height: 1.5; }
+  .tic-cta-eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: #a8833d;
+    margin-bottom: 8px;
+  }
+
+  .tic-cta h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #0a1a2a;
+    margin-bottom: 8px;
+    line-height: 1.2;
+  }
+
+  .tic-cta p {
+    font-size: 14px;
+    color: #6e685e;
+    line-height: 1.6;
+    max-width: 420px;
+  }
 
   .tic-cta-btn {
     display: inline-block;
-    background: #fff;
-    color: #15171a;
-    border-radius: 5px;
-    padding: 11px 24px;
+    background: #0a1a2a;
+    color: #fdfbf4;
+    border-radius: 4px;
+    padding: 12px 28px;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
     text-decoration: none;
+    font-family: 'IBM Plex Sans', sans-serif;
     white-space: nowrap;
-    transition: opacity .15s;
     flex-shrink: 0;
+    transition: background .15s;
   }
-  .tic-cta-btn:hover { opacity: .85; color: #15171a; }
+  .tic-cta-btn:hover { background: #a8833d; color: #fff; }
 
   @media (max-width: 640px) {
     .tic-hub-grid { grid-template-columns: 1fr; }
-    .tic-cta { text-align: center; justify-content: center; }
+    .tic-hub-header h1 { font-size: 28px; }
+    .tic-cta { padding: 28px 24px; }
+    .tic-cta { flex-direction: column; align-items: flex-start; }
   }
 </style>
 
 <div class="tic-hub">
 
   <div class="tic-hub-header">
-    <h1>Research Tools</h1>
-    <p>Institutional-grade market analysis tools built for The Investing Clinic community. Paid membership required.</p>
+    <div class="tic-hub-eyebrow">Member Tools</div>
+    <h1>Research &amp; Analysis Tools</h1>
+    <p>Institutional-grade tools built exclusively for The Investing Clinic community. Updated continuously.</p>
   </div>
 
   <div class="tic-hub-grid">
 
     <!-- Squeeze Scanner -->
     <div class="tic-tool-card">
-      <div class="tic-card-top">
-        <span class="tic-card-badge tic-badge-live">
+      <div class="tic-card-body">
+        <span class="tic-badge tic-badge-live">
           <span class="tic-badge-dot"></span> Live
         </span>
         <span class="tic-card-icon">🔥</span>
         <div class="tic-card-title">Squeeze Scanner</div>
+        <div class="tic-card-question">Where is market structure pressure building?</div>
         <div class="tic-card-desc">
-          Where is market structure pressure building? Scans for short squeeze setups using options flow, gamma exposure, and short interest. Scores every ticker 0–100. Discord alerts fire automatically for high-conviction setups.
+          Scans for short squeeze setups using options flow, gamma exposure, and short interest. Every ticker scored 0–100. Discord alerts fire automatically when high-conviction setups emerge.
         </div>
         <div class="tic-signals">
           <span class="tic-signal">Short interest</span>
@@ -240,65 +304,67 @@
           <span class="tic-signal">Call volume</span>
           <span class="tic-signal">Float size</span>
           <span class="tic-signal">IV expansion</span>
-          <span class="tic-signal">Dark pool zones</span>
+          <span class="tic-signal">Volume zones</span>
         </div>
       </div>
       <div class="tic-card-footer">
-        <span class="tic-card-meta">Updates every 30 min · Market hours only</span>
-        <a href="/scanner" class="tic-launch-btn">Launch →</a>
+        <span class="tic-card-meta">Updates every 30 min · Market hours</span>
+        <a href="/scanner" class="tic-launch">Open tool →</a>
       </div>
     </div>
 
     <!-- Whale Watch -->
     <div class="tic-tool-card">
-      <div class="tic-card-top">
-        <span class="tic-card-badge tic-badge-live">
+      <div class="tic-card-body">
+        <span class="tic-badge tic-badge-live">
           <span class="tic-badge-dot"></span> Live
         </span>
         <span class="tic-card-icon">🐋</span>
         <div class="tic-card-title">Whale Watch</div>
+        <div class="tic-card-question">Where is smart money positioned?</div>
         <div class="tic-card-desc">
-          Follow the smart money. Track holdings of major fund managers through SEC 13F filings — value, macro, activist, long/short, and quant funds. Filter by strategy, sort by AUM, and see exactly where institutions are positioned.
+          Track holdings of the world's top fund managers through mandatory SEC 13F disclosures. Filter by strategy — value, macro, activist, long/short, quant — and see exactly where institutions are building positions.
         </div>
         <div class="tic-signals">
           <span class="tic-signal">13F filings</span>
           <span class="tic-signal">AUM tracking</span>
           <span class="tic-signal">Position changes</span>
           <span class="tic-signal">Fund categories</span>
-          <span class="tic-signal">Portfolio %</span>
+          <span class="tic-signal">Portfolio weight</span>
         </div>
       </div>
       <div class="tic-card-footer">
         <span class="tic-card-meta">SEC filings · 45-day reporting lag</span>
-        <a href="https://whales.theinvestingclinic.com" class="tic-launch-btn" target="_blank">Launch →</a>
+        <a href="https://whales.theinvestingclinic.com" class="tic-launch" target="_blank">Open tool →</a>
       </div>
     </div>
 
-    <!-- Placeholder: coming soon -->
-    <div class="tic-tool-card coming-soon">
-      <div class="tic-card-top">
-        <span class="tic-card-badge" style="background:#f9fafb;color:#9ba3af;border:1px solid #e6e6e6">
-          Coming soon
-        </span>
-        <span class="tic-card-icon">📊</span>
-        <div class="tic-card-title">More tools in development</div>
+    <!-- Coming soon -->
+    <div class="tic-tool-card dimmed">
+      <div class="tic-card-body">
+        <span class="tic-badge tic-badge-soon">In development</span>
+        <span class="tic-card-icon">📡</span>
+        <div class="tic-card-title">More tools coming</div>
         <div class="tic-card-desc">
-          New tools are added regularly for paid members. Check back soon.
+          New tools are added regularly for paid members. Suggestions welcome in Discord.
         </div>
       </div>
       <div class="tic-card-footer">
-        <span class="tic-card-meta">In development</span>
-        <span class="tic-launch-btn locked">Coming soon</span>
+        <span class="tic-card-meta">&nbsp;</span>
+        <span class="tic-launch disabled">Coming soon</span>
       </div>
     </div>
 
   </div>
 
-  <!-- CTA for non-members -->
+  <div class="tic-divider"></div>
+
+  <!-- CTA -->
   <div class="tic-cta">
     <div>
-      <h2>Access all tools with a membership</h2>
-      <p>All tools are available to paid members. 100% of membership profits donated to kids and schools.</p>
+      <div class="tic-cta-eyebrow">Membership</div>
+      <h2>Access every tool, every update</h2>
+      <p>All tools are available to paid members. 100% of membership profits are donated to kids and schools.</p>
     </div>
     <a href="/#/portal/signup" class="tic-cta-btn">Become a member →</a>
   </div>
