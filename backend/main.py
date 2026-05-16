@@ -13,17 +13,35 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
 from config import settings
-from database import create_tables, get_db, ScanResult, Alert
+from database import create_tables, get_db, ScanResult, Alert, SessionLocal
 from scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
 
+async def _startup_scan():
+    """Run a scan on startup if the database is empty."""
+    import asyncio
+    await asyncio.sleep(5)  # let the server finish starting
+    try:
+        db = SessionLocal()
+        count = db.query(ScanResult).count()
+        db.close()
+        if count == 0:
+            log.info("Database empty on startup — running initial scan")
+            from scanner import run_full_scan
+            await run_full_scan()
+    except Exception as e:
+        log.warning(f"Startup scan failed: {e}")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_tables()
     start_scheduler()
+    import asyncio
+    asyncio.create_task(_startup_scan())
     yield
     stop_scheduler()
 

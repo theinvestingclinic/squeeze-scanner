@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     reddit_user_agent: str = "SqueezeScanner/1.0"
     alert_threshold: int = 75
     scan_interval_minutes: int = 30
-    database_url: str = "sqlite:///./scanner.db"
+    database_url: str = "sqlite:////data/scanner.db"
     allowed_origin: str = "https://theinvestingclinic.com"
 
     class Config:
