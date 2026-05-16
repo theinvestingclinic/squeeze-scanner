@@ -3,6 +3,7 @@ import time
 import logging
 from datetime import datetime
 from sqlalchemy.orm import Session
+import numpy as np
 
 from database import ScanResult, Alert, SessionLocal
 from options_data import get_options_metrics
@@ -14,6 +15,23 @@ from scoring import calculate_score
 from ticker_universe import get_ticker_universe
 
 log = logging.getLogger(__name__)
+
+
+def _to_python(v):
+    """Convert numpy scalars to plain Python types so SQLAlchemy and json.dumps don't choke."""
+    if isinstance(v, np.bool_):
+        return bool(v)
+    if isinstance(v, np.integer):
+        return int(v)
+    if isinstance(v, np.floating):
+        return float(v) if not np.isnan(v) else 0.0
+    if isinstance(v, np.ndarray):
+        return v.tolist()
+    return v
+
+
+def _normalize(data: dict) -> dict:
+    return {k: _to_python(v) for k, v in data.items()}
 
 
 def scan_ticker(ticker: str) -> dict | None:
@@ -40,6 +58,7 @@ def scan_ticker(ticker: str) -> dict | None:
             "reddit_saturation": reddit_sat,
         }
 
+        data = _normalize(data)
         score, breakdown = calculate_score(data)
         data["score"] = score
         data["score_breakdown"] = breakdown
