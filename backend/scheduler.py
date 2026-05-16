@@ -30,8 +30,23 @@ async def _scheduled_scan():
     await run_full_scan(alert_threshold=settings.alert_threshold)
 
 
+async def _scheduled_discovery():
+    """Run FINRA ticker discovery every morning at 8:30 AM ET before market open."""
+    log.info("Running daily ticker discovery")
+    from ticker_discovery import run_discovery
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        new_tickers = await run_discovery(db)
+        if new_tickers:
+            log.info(f"Discovery added {len(new_tickers)} new tickers: {new_tickers[:10]}")
+    finally:
+        db.close()
+
+
 def start_scheduler():
     interval = settings.scan_interval_minutes
+
     scheduler.add_job(
         _scheduled_scan,
         trigger=CronTrigger(minute=f"*/{interval}"),
@@ -39,8 +54,18 @@ def start_scheduler():
         replace_existing=True,
         misfire_grace_time=120,
     )
+
+    # Run discovery every weekday at 8:30 AM ET (before market open)
+    scheduler.add_job(
+        _scheduled_discovery,
+        trigger=CronTrigger(day_of_week="mon-fri", hour=8, minute=30),
+        id="ticker_discovery",
+        replace_existing=True,
+        misfire_grace_time=300,
+    )
+
     scheduler.start()
-    log.info(f"Scheduler started — scan every {interval} minutes during market hours")
+    log.info(f"Scheduler started — scan every {interval} min, discovery daily at 8:30 AM ET")
 
 
 def stop_scheduler():

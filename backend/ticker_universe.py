@@ -26,9 +26,27 @@ SQUEEZE_WATCHLIST = [
     "ARVL", "NURO", "IDEX", "HPNN", "AIXI", "AITX",
 ]
 
-# Optionally scan broader market; toggled by SCAN_BROAD env var
+def get_discovered_tickers() -> list[str]:
+    """Pull active tickers from the FINRA discovery table."""
+    try:
+        from database import SessionLocal, DiscoveredTicker
+        db = SessionLocal()
+        try:
+            rows = db.query(DiscoveredTicker).filter_by(is_active=True).all()
+            return [r.ticker for r in rows]
+        finally:
+            db.close()
+    except Exception:
+        return []
+
+
 def get_ticker_universe(include_sp500: bool = False) -> list[str]:
-    universe = list(dict.fromkeys(SQUEEZE_WATCHLIST))  # deduplicate, preserve order
+    # Start with permanent seed list
+    universe = list(dict.fromkeys(SQUEEZE_WATCHLIST))
+
+    # Merge in dynamically discovered tickers from FINRA sweep
+    discovered = get_discovered_tickers()
+    universe = list(dict.fromkeys(universe + discovered))
 
     if include_sp500:
         sp500 = get_sp500_tickers()

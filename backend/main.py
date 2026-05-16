@@ -132,6 +132,40 @@ async def scan_single_ticker(symbol: str, db: Session = Depends(get_db)):
     return data
 
 
+@app.post("/api/discovery/run")
+async def trigger_discovery(background_tasks: BackgroundTasks):
+    """Manually trigger the FINRA ticker discovery sweep."""
+    from ticker_discovery import run_discovery
+    from database import SessionLocal
+
+    async def _run():
+        db = SessionLocal()
+        try:
+            await run_discovery(db)
+        finally:
+            db.close()
+
+    background_tasks.add_task(_run)
+    return {"message": "Discovery started", "time": datetime.utcnow().isoformat()}
+
+
+@app.get("/api/discovery/tickers")
+def get_discovered_tickers(db: Session = Depends(get_db)):
+    """List all active tickers found via FINRA discovery."""
+    from database import DiscoveredTicker
+    rows = db.query(DiscoveredTicker).filter_by(is_active=True).order_by(
+        DiscoveredTicker.last_seen_at.desc()
+    ).all()
+    return {
+        "count": len(rows),
+        "tickers": [
+            {"ticker": r.ticker, "discovered_at": r.discovered_at.isoformat(),
+             "last_seen_at": r.last_seen_at.isoformat()}
+            for r in rows
+        ]
+    }
+
+
 @app.get("/api/alerts")
 def get_alerts(limit: int = 20, db: Session = Depends(get_db)):
     """Recent Discord alerts that were sent."""

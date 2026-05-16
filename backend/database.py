@@ -61,6 +61,17 @@ class Alert(Base):
     sent_at = Column(DateTime, default=datetime.utcnow)
 
 
+class DiscoveredTicker(Base):
+    __tablename__ = "discovered_tickers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    ticker = Column(String, unique=True, index=True)
+    source = Column(String, default="finra_short_volume")
+    discovered_at = Column(DateTime, default=datetime.utcnow)
+    last_seen_at = Column(DateTime, default=datetime.utcnow)
+    is_active = Column(Boolean, default=True)
+
+
 def create_tables():
     Base.metadata.create_all(bind=engine)
 
