@@ -30,9 +30,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Squeeze Scanner", version="1.0.0", lifespan=lifespan)
 
+def _build_origins(origin: str) -> list[str]:
+    """Always allow both www and non-www variants of the configured origin."""
+    origins = {origin, "http://localhost:3000", "http://localhost:8080"}
+    if origin.startswith("https://www."):
+        origins.add(origin.replace("https://www.", "https://"))
+    elif origin.startswith("https://"):
+        origins.add(origin.replace("https://", "https://www."))
+    return list(origins)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.allowed_origin, "http://localhost:3000", "http://localhost:8080"],
+    allow_origins=_build_origins(settings.allowed_origin),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
