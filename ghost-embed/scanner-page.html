@@ -322,6 +322,101 @@
     line-height: 1.6;
   }
 
+  /* Educational section */
+  .tic-edu {
+    margin-top: 60px;
+    padding-top: 48px;
+    border-top: 2px solid #d9d0be;
+  }
+
+  .tic-edu-header {
+    margin-bottom: 36px;
+    max-width: 640px;
+  }
+
+  .tic-edu-header h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 30px;
+    font-weight: 700;
+    color: #0a1a2a;
+    letter-spacing: -0.3px;
+    margin-bottom: 12px;
+  }
+
+  .tic-edu-intro {
+    font-size: 16px;
+    color: #6e685e;
+    line-height: 1.65;
+  }
+
+  .tic-edu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+
+  .tic-edu-card {
+    background: #fff;
+    border: 1px solid #d9d0be;
+    border-radius: 6px;
+    padding: 28px;
+  }
+
+  .tic-edu-icon {
+    font-size: 26px;
+    margin-bottom: 12px;
+    line-height: 1;
+  }
+
+  .tic-edu-card h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0a1a2a;
+    margin-bottom: 12px;
+  }
+
+  .tic-edu-card p {
+    font-size: 14px;
+    color: #2a3a4a;
+    line-height: 1.7;
+    margin-bottom: 12px;
+  }
+
+  .tic-edu-card p:last-child { margin-bottom: 0; }
+
+  .tic-edu-note {
+    font-size: 12px !important;
+    color: #a8a09a !important;
+    font-style: italic;
+    border-top: 1px solid #ece4d2;
+    padding-top: 10px;
+    margin-top: 10px;
+  }
+
+  .tic-edu-levels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .tic-lvl {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 3px;
+  }
+
+  .tic-lvl.low  { background: #f6f1e4; color: #6e685e; border: 1px solid #ece4d2; }
+  .tic-lvl.mid  { background: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
+  .tic-lvl.hot  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+  @media (max-width: 700px) {
+    .tic-edu-grid { grid-template-columns: 1fr; }
+    .tic-edu-header h2 { font-size: 24px; }
+  }
+
   @media (max-width: 700px) {
     .tic-stats { grid-template-columns: repeat(2, 1fr); }
     .tic-detail-body { grid-template-columns: 1fr; }
@@ -364,9 +459,9 @@
   <div class="tic-controls">
     <input type="text" id="tic-search" placeholder="Search ticker…" style="width:150px" />
     <select id="tic-filter">
-      <option value="0">All scores</option>
+      <option value="0" selected>All scores</option>
       <option value="40">40+ only</option>
-      <option value="60" selected>60+ only</option>
+      <option value="60">60+ only</option>
       <option value="75">High conviction (75+)</option>
     </select>
     <button class="tic-btn" id="tic-refresh">↻ Refresh</button>
@@ -420,7 +515,91 @@
   </div>
 
   <div class="tic-disclaimer">
-    <strong>Not financial advice.</strong> The Investing Clinic squeeze scanner surfaces structural signals as an educational research tool. Scores are calculated from publicly available data. Short interest data is reported bi-weekly and may not reflect current positions. Always conduct your own research before making investment decisions.
+    <strong>Not financial advice.</strong> The Clinic squeeze scanner surfaces structural signals as an educational research tool.  Scores are calculated from publicly available data.  SHORT INTEREST data is reported bi-weekly and may not reflect current positions.  Always conduct your own research before making investment decisions.
+  </div>
+
+  <!-- Educational Section -->
+  <div class="tic-edu">
+
+    <div class="tic-edu-header">
+      <div class="tic-eyebrow">How It Works</div>
+      <h2>Understanding The Squeeze Scanner</h2>
+      <p class="tic-edu-intro">Think of this scanner as a smoke detector.  It doesn't start the fire - it tells you where the pressure is building before the fire starts.  Here's what each signal means and why we track it.</p>
+    </div>
+
+    <div class="tic-edu-grid">
+
+      <div class="tic-edu-card">
+        <div class="tic-edu-icon">🔥</div>
+        <h3>The Squeeze Score</h3>
+        <p>When a stock gets SQUEEZED, it's not magic.  It's math.  Short sellers borrowed shares and bet the price would fall.  When they're wrong, they have to BUY those shares back - fast.  That forced buying is what sends a stock up 50%, 100%, sometimes more in a matter of days.</p>
+        <p>The Squeeze Score combines all the signals below into a single number from 0 to 100.  Above 60 means the ingredients are in place.  Above 75 means we're watching closely.  When we see a 75+ score with the stock breaking key levels on heavy VOLUME - that's when Discord gets the alert.</p>
+      </div>
+
+      <div class="tic-edu-card">
+        <div class="tic-edu-icon">⛽</div>
+        <h3>SHORT INTEREST - The Fuel</h3>
+        <p>SHORT INTEREST tells you how many shares are being bet against a stock, shown as a percentage of the available shares.  A SHORT INTEREST of 20% means 1 in 5 shares has been borrowed by someone betting the stock falls.</p>
+        <p>Why does that matter?  Because every short seller has to BUY back eventually.  The higher the SHORT INTEREST, the more forced buying waiting to happen.  When a catalyst hits and the price starts moving up, those shorts panic - and their buying fuels the SQUEEZE.</p>
+        <div class="tic-edu-levels">
+          <span class="tic-lvl low">10-20% - Watching</span>
+          <span class="tic-lvl mid">20-30% - Interesting</span>
+          <span class="tic-lvl hot">30%+ - Ripe</span>
+        </div>
+      </div>
+
+      <div class="tic-edu-card">
+        <div class="tic-edu-icon">💥</div>
+        <h3>FLOAT - The Fire Starter</h3>
+        <p>FLOAT is the number of shares actually available for regular people to trade.  Not what the company issued total - just what's out there changing hands.</p>
+        <p>Here's the key: a smaller FLOAT means the same buying pressure moves the stock more.  It's physics.  Try to push a small boulder versus a large one.  Stocks with a small FLOAT get squeezed harder because there simply aren't enough shares to absorb the buying.</p>
+        <div class="tic-edu-levels">
+          <span class="tic-lvl hot">Under 10M shares - Powder keg</span>
+          <span class="tic-lvl mid">10-50M shares - Solid setup</span>
+          <span class="tic-lvl low">100M+ shares - Loses punch</span>
+        </div>
+      </div>
+
+      <div class="tic-edu-card">
+        <div class="tic-edu-icon">📈</div>
+        <h3>CALL VOLUME - The Gasoline</h3>
+        <p>When you see CALL VOLUME running 3x, 5x, even 10x above normal - someone is loading up on bets that the stock is going higher.  That's not random.  That's a signal.</p>
+        <p>But here's where it gets interesting.  The people selling those call options - usually big market makers - have to BUY the actual stock to hedge their position.  As the price rises, they have to buy MORE.  CALL VOLUME isn't just a sign of bullish sentiment.  It's fuel for a mechanical buying cycle that runs on its own.</p>
+      </div>
+
+      <div class="tic-edu-card">
+        <div class="tic-edu-icon">⚡</div>
+        <h3>GAMMA - The Accelerant</h3>
+        <p>GAMMA sounds complicated.  It isn't.  It measures how much market makers have to buy or sell as the stock price moves - not because they want to, but because they have to in order to stay hedged.</p>
+        <p>When a stock is in a "negative GAMMA" environment, market makers are forced to buy more stock as the price rises.  That mechanical buying amplifies every move up.  It's a feedback loop.  The price rises, they buy, the price rises more, they buy more.</p>
+        <p>If you see "Negative" in the Gamma column, the market structure is lined up to accelerate any move higher.</p>
+      </div>
+
+      <div class="tic-edu-card">
+        <div class="tic-edu-icon">🎯</div>
+        <h3>CALL WALL & ZERO GAMMA - The Levels</h3>
+        <p>The <strong>CALL WALL</strong> is the price level where the most call options are concentrated.  Think of it as a magnet.  As the stock approaches that price, market maker activity intensifies around those options.  Breaking above the CALL WALL with strong VOLUME is one of the cleanest signals we track.</p>
+        <p>The <strong>ZERO GAMMA</strong> level is the flip point.  Below it, market makers stabilize prices - they buy dips and sell rips.  Above it, the dynamic flips and they start amplifying moves instead.  When a stock breaks above ZERO GAMMA, you're entering squeeze territory.  That's the line we watch.</p>
+      </div>
+
+      <div class="tic-edu-card">
+        <div class="tic-edu-icon">🐋</div>
+        <h3>VOLUME ZONES - Where Big Money Played</h3>
+        <p>These zones show price levels where an unusually large amount of trading happened over the past 30 days.  Big institutions leave footprints.  High-volume zones often act as SUPPORT or RESISTANCE because the same players who traded there before tend to act at those levels again.</p>
+        <p>Watch for the stock to bounce off a volume zone, or break through one on conviction.  Both tell a story.  A break above a high-volume zone on big VOLUME is confirmation the move has real participation behind it.</p>
+        <p class="tic-edu-note">Note: volume zones are a proxy for dark pool activity.  Actual dark pool print data requires a paid data provider.  We'll upgrade this when the tool scales.</p>
+      </div>
+
+      <div class="tic-edu-card">
+        <div class="tic-edu-icon">📋</div>
+        <h3>How To Use This Scanner</h3>
+        <p>You're not trying to find a perfect score.  You're building context.</p>
+        <p>Start with the score - anything above 60 is worth clicking.  Then open the detail panel and look at the gamma map.  Is the stock below the CALL WALL?  Below ZERO GAMMA?  That means the setup is loading but hasn't triggered yet.  Is it breaking above those levels on heavy VOLUME?  That's the entry we look for.</p>
+        <p>No score is a guarantee.  SHORT INTEREST data is published twice a month, so it's never perfectly current.  Use this as one tool alongside your own research - not as a buy signal on its own.</p>
+        <p>That's how we use it.  That's how you should too.</p>
+      </div>
+
+    </div>
   </div>
 
 </div>
