@@ -184,7 +184,8 @@
   }
 
   /* Launch button */
-  .tic-launch {
+  .tic-hub a.tic-launch,
+  .tic-hub a.tic-launch:visited {
     display: inline-block;
     background: #0a1a2a;
     color: #fdfbf4 !important;
@@ -198,12 +199,13 @@
     transition: background .15s;
     white-space: nowrap;
   }
-  .tic-launch:hover { background: #a8833d; color: #fdfbf4 !important; }
+  .tic-hub a.tic-launch:hover { background: #a8833d; color: #fdfbf4 !important; }
 
-  .tic-launch.disabled {
+  .tic-hub .tic-launch.disabled {
     background: #ece4d2;
-    color: #a8a09a;
+    color: #a8a09a !important;
     pointer-events: none;
+    text-decoration: none !important;
   }
 
   /* Gold rule divider */
@@ -252,7 +254,8 @@
     max-width: 420px;
   }
 
-  .tic-cta-btn {
+  .tic-hub a.tic-cta-btn,
+  .tic-hub a.tic-cta-btn:visited {
     display: inline-block;
     background: #0a1a2a;
     color: #fdfbf4 !important;
@@ -266,7 +269,7 @@
     flex-shrink: 0;
     transition: background .15s;
   }
-  .tic-cta-btn:hover { background: #a8833d; color: #fdfbf4 !important; }
+  .tic-hub a.tic-cta-btn:hover { background: #a8833d; color: #fdfbf4 !important; }
 
   @media (max-width: 640px) {
     .tic-hub-grid { grid-template-columns: 1fr; }
