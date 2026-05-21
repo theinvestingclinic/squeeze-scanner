@@ -474,6 +474,8 @@
           <tr>
             <th>Ticker</th>
             <th>Score</th>
+            <th>Setup</th>
+            <th>Trigger</th>
             <th>Price</th>
             <th>Short Int</th>
             <th>Call Vol</th>
@@ -483,7 +485,7 @@
           </tr>
         </thead>
         <tbody id="tic-tbody">
-          <tr><td colspan="8" class="tic-empty">Loading scan results…</td></tr>
+          <tr><td colspan="10" class="tic-empty">Loading scan results…</td></tr>
         </tbody>
       </table>
     </div>
@@ -669,7 +671,7 @@
     } catch {
       setStatus('error');
       document.getElementById('tic-tbody').innerHTML =
-        '<tr><td colspan="8" class="tic-empty" style="color:#dc2626">Could not reach scanner. Try refreshing.</td></tr>';
+        '<tr><td colspan="10" class="tic-empty" style="color:#dc2626">Could not reach scanner. Try refreshing.</td></tr>';
     }
   }
 
@@ -698,13 +700,15 @@
     const rows = all.filter(r => r.score >= min && (!q || r.ticker.includes(q)));
     const tbody = document.getElementById('tic-tbody');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="8" class="tic-empty">No results match your filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" class="tic-empty">No results match your filters.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(r => `
       <tr onclick="ticDetail('${r.ticker}')">
         <td class="tic-ticker">${r.ticker}</td>
         <td>${badge(r.score)}</td>
+        <td><span style="font-size:12px;color:#6e685e">${r.setup_score != null ? r.setup_score : '—'}</span></td>
+        <td><span style="font-size:12px;color:#6e685e">${r.trigger_score != null ? r.trigger_score : '—'}</span></td>
         <td>$${f(r.price)}</td>
         <td>${r.short_interest_pct > 0 ? r.short_interest_pct+'%' : '<span style="color:#a8a09a">—</span>'}</td>
         <td>${r.call_volume_ratio > 0 ? r.call_volume_ratio+'x' : '—'}</td>
@@ -733,7 +737,9 @@
   window.ticDetail = function(ticker) {
     const d = all.find(r => r.ticker === ticker);
     if (!d) return;
-    document.getElementById('tic-detail-title').textContent = '$' + ticker + ' — Score ' + d.score + '/100';
+    const setupLabel  = d.setup_score   != null ? ` · Setup ${d.setup_score}/47`   : '';
+    const triggerLabel = d.trigger_score != null ? ` · Trigger ${d.trigger_score}/60` : '';
+    document.getElementById('tic-detail-title').textContent = '$' + ticker + ' — Score ' + d.score + '/100' + setupLabel + triggerLabel;
 
     document.getElementById('tic-gamma').innerHTML = [
       ['Price',       '$'+f(d.price)],
@@ -756,10 +762,23 @@
       : '<p style="font-size:13px;color:#a8a09a">No significant zones detected.</p>';
 
     const bd = d.score_breakdown || {};
-    const maxPts = {short_interest:20,float:10,price_trend:10,call_volume:15,gamma:12,call_oi_buildup:10,iv_expansion:8,level_break:8,relative_volume:7,reddit_danger:15};
-    const labels = {short_interest:'Short interest',float:'Float',price_trend:'Price trend',call_volume:'Call vol ratio*',gamma:'Gamma',call_oi_buildup:'Call OI above spot*',iv_expansion:'IV rank*',level_break:'Level break',relative_volume:'Rel volume',reddit_danger:'Reddit danger'};
-    document.getElementById('tic-breakdown').innerHTML = '<p style="font-size:11px;color:#a8a09a;margin-bottom:10px">* Proxy signals — see scanner guide below for methodology</p>' + Object.entries(bd)
-      .filter(([k]) => k !== 'total')
+    const maxPts = {short_interest:20,float:10,call_oi_concentration:10,short_sale_flow:7,call_volume:15,gamma:12,price_trend:10,near_term_iv_rank:8,level_break:8,relative_volume:7,reddit_danger:15,already_squeezed:10};
+    const labels = {short_interest:'Short interest',float:'Float',call_oi_concentration:'Call OI above spot',short_sale_flow:'Short sale flow',call_volume:'Call vol ratio',gamma:'Gamma (magnitude)',price_trend:'Price trend',near_term_iv_rank:'Near-term IV rank',level_break:'Level break',relative_volume:'Rel volume',reddit_danger:'Reddit danger',already_squeezed:'Already squeezed'};
+    const dq = bd._data_quality || {};
+    const qFlags = [
+      !dq.has_short_data   ? '⚠ Short data unavailable'              : null,
+      !dq.has_options_data ? '⚠ Options data unavailable'            : null,
+      !dq.has_finra_data   ? '⚠ FINRA ratio not loaded yet'          : null,
+      !dq.has_reddit_data  ? '⚠ Reddit signal off (no credentials)'  : null,
+    ].filter(Boolean);
+    const qHtml = qFlags.length
+      ? '<div style="margin-bottom:10px">' + qFlags.map(f =>
+          `<span style="font-size:11px;color:#d97706;display:block">${f}</span>`).join('') + '</div>'
+      : '';
+
+    const _skip = new Set(['total','setup_score','trigger_score','_data_quality']);
+    document.getElementById('tic-breakdown').innerHTML = qHtml + Object.entries(bd)
+      .filter(([k]) => !_skip.has(k))
       .map(([k,pts]) => {
         const pct = Math.min(Math.abs(pts)/(maxPts[k]||10)*100, 100);
         const neg = pts < 0;

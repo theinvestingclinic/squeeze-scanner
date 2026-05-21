@@ -81,6 +81,8 @@ def _result_to_dict(r: ScanResult) -> dict:
         "id": r.id,
         "ticker": r.ticker,
         "score": r.score,
+        "setup_score": r.setup_score,
+        "trigger_score": r.trigger_score,
         "price": r.price,
         "short_interest_pct": r.short_interest_pct,
         "float_shares_m": r.float_shares_m,

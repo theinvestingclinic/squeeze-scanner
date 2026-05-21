@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import numpy as np
 
+from config import settings
 from database import ScanResult, ScanRun, Alert, SessionLocal
 from options_data import get_options_metrics
 from short_data import get_short_data
@@ -64,11 +65,14 @@ def scan_ticker(ticker: str) -> dict | None:
             "net_gex": gamma.get("net_gex", 0),
             "volume_zones": zones,
             "reddit_saturation": reddit_sat,
+            "reddit_data_available": bool(settings.reddit_client_id),
         }
 
         data = _normalize(data)
         score, breakdown = calculate_score(data)
         data["score"] = score
+        data["setup_score"] = breakdown.get("setup_score", 0)
+        data["trigger_score"] = breakdown.get("trigger_score", 0)
         data["score_breakdown"] = breakdown
 
         return data
@@ -83,6 +87,8 @@ def save_result(db: Session, data: dict, scan_run_id: int | None = None) -> Scan
         scan_run_id=scan_run_id,
         ticker=data["ticker"],
         score=data.get("score", 0),
+        setup_score=data.get("setup_score"),
+        trigger_score=data.get("trigger_score"),
         price=data.get("price", 0),
         short_interest_pct=data.get("short_interest_pct", 0),
         float_shares_m=data.get("float_shares_m", 0),

@@ -25,6 +25,8 @@ class ScanResult(Base):
     scan_run_id = Column(Integer, nullable=True, index=True)
     ticker = Column(String, index=True)
     score = Column(Float, default=0)
+    setup_score = Column(Float, nullable=True)
+    trigger_score = Column(Float, nullable=True)
     price = Column(Float, default=0)
 
     # Foundation
@@ -93,6 +95,8 @@ def create_tables():
         for ddl in [
             "ALTER TABLE scan_results ADD COLUMN finra_short_vol_ratio REAL",
             "ALTER TABLE scan_results ADD COLUMN scan_run_id INTEGER",
+            "ALTER TABLE scan_results ADD COLUMN setup_score REAL",
+            "ALTER TABLE scan_results ADD COLUMN trigger_score REAL",
         ]:
             try:
                 conn.execute(text(ddl))
