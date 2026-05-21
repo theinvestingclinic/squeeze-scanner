@@ -9,7 +9,7 @@ scheduler = AsyncIOScheduler(timezone="America/New_York")
 
 
 async def _scheduled_scan():
-    log.info("Running daily scan")
+    log.info("Running scheduled scan")
     from scanner import run_full_scan
     await run_full_scan(alert_threshold=settings.alert_threshold)
 
@@ -28,16 +28,22 @@ async def _scheduled_discovery():
 
 
 def start_scheduler():
-    # Full scan every morning at 6:00 AM ET, 7 days a week
+    interval = settings.scan_interval_minutes
+
+    # Scan every N minutes, Mon-Fri, 8 AM–5 PM ET
     scheduler.add_job(
         _scheduled_scan,
-        trigger=CronTrigger(hour=6, minute=0),
+        trigger=CronTrigger(
+            day_of_week="mon-fri",
+            hour="8-17",
+            minute=f"*/{interval}",
+        ),
         id="full_scan",
         replace_existing=True,
-        misfire_grace_time=300,
+        misfire_grace_time=120,
     )
 
-    # FINRA discovery weekdays at 8:30 AM ET (after prior day's data is posted)
+    # FINRA discovery weekdays at 8:30 AM ET
     scheduler.add_job(
         _scheduled_discovery,
         trigger=CronTrigger(day_of_week="mon-fri", hour=8, minute=30),
@@ -47,7 +53,7 @@ def start_scheduler():
     )
 
     scheduler.start()
-    log.info("Scheduler started — scan daily at 6:00 AM ET, discovery weekdays at 8:30 AM ET")
+    log.info(f"Scheduler started — scan every {interval} min Mon-Fri 8 AM-5 PM ET, discovery at 8:30 AM ET")
 
 
 def stop_scheduler():
