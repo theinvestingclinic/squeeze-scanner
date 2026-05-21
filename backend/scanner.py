@@ -126,8 +126,7 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
             save_result(db, data)
             results.append(data)
 
-            # Throttle to avoid yfinance rate limits
-            time.sleep(0.5)
+            time.sleep(0.1)
 
         results.sort(key=lambda x: x.get("score", 0), reverse=True)
 

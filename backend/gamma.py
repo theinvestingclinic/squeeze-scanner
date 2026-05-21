@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.stats import norm
 from datetime import datetime
-import yfinance as yf
+from yf_cache import get_history, get_options_list, get_option_chain
 
 
 def _bs_gamma(S: float, K: float, T: float, r: float, sigma: float) -> float:
@@ -12,22 +12,13 @@ def _bs_gamma(S: float, K: float, T: float, r: float, sigma: float) -> float:
 
 
 def get_gamma_data(ticker: str) -> dict:
-    """
-    Calculate gamma exposure (GEX), call wall, put wall, and zero-gamma level.
-
-    GEX convention (SqueezeMetrics):
-      GEX = Σ(call_OI × gamma − put_OI × gamma) × 100 × spot
-      Positive GEX = dealers long gamma (stabilising)
-      Negative GEX = dealers short gamma (amplifies moves — squeeze fuel)
-    """
     try:
-        stock = yf.Ticker(ticker)
-        hist = stock.history(period="2d")
+        hist = get_history(ticker, "60d")
         if hist.empty:
             return {}
         spot = float(hist["Close"].iloc[-1])
 
-        expirations = stock.options
+        expirations = get_options_list(ticker)
         if not expirations:
             return {}
 
@@ -40,7 +31,7 @@ def get_gamma_data(ticker: str) -> dict:
             try:
                 exp_date = datetime.strptime(exp, "%Y-%m-%d")
                 T = max((exp_date - datetime.now()).days / 365.0, 1 / 365)
-                chain = stock.option_chain(exp)
+                chain = get_option_chain(ticker, exp)
 
                 for row in chain.calls.itertuples():
                     K = float(row.strike)
@@ -68,29 +59,22 @@ def get_gamma_data(ticker: str) -> dict:
         if not gex_by_strike:
             return {}
 
-        # Call wall — highest call OI concentration above spot
         calls_above = {k: v for k, v in call_oi_by_strike.items() if k > spot}
         call_wall = max(calls_above, key=calls_above.get) if calls_above else None
 
-        # Put wall — highest put OI concentration below spot
         puts_below = {k: v for k, v in put_oi_by_strike.items() if k <= spot}
         put_wall = max(puts_below, key=puts_below.get) if puts_below else None
 
-        # Zero gamma — strike where cumulative GEX flips sign
         strikes = sorted(gex_by_strike)
         zero_gamma = None
         for i in range(len(strikes) - 1):
             g1 = gex_by_strike[strikes[i]]
             g2 = gex_by_strike[strikes[i + 1]]
             if g1 * g2 < 0:
-                # Linear interpolation for crossing point
                 zero_gamma = strikes[i] + (strikes[i + 1] - strikes[i]) * abs(g1) / (abs(g1) + abs(g2))
                 break
 
-        # Net GEX above spot (negative = dealers must buy on rally = squeeze fuel)
         gex_above_spot = sum(v for k, v in gex_by_strike.items() if k > spot)
-
-        # Total net GEX
         net_gex = sum(gex_by_strike.values())
 
         return {
