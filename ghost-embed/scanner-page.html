@@ -675,14 +675,27 @@
       if (!res.ok) throw new Error();
       const data = await res.json();
       all = data.results || [];
-      setStatus('live');
-      renderStats();
-      render();
-      if (all.length && all[0].scanned_at) {
+
+      if (all.length) {
+        setStatus('live');
+        renderStats();
+        render();
         lastScannedAt = all[0].scanned_at;
         const d = new Date(all[0].scanned_at + 'Z');
         document.getElementById('tic-last-scan').textContent =
           'Last scan: ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      } else {
+        // No results yet — check if a scan is actively running
+        const sr = await fetch(API + '/api/scan/status').then(r => r.json()).catch(() => ({}));
+        if (sr.scanning) {
+          setStatus('scanning');
+          document.getElementById('tic-tbody').innerHTML =
+            '<tr><td colspan="10" class="tic-empty">Scan in progress — results will appear when complete (5-15 min)…</td></tr>';
+        } else {
+          setStatus('live');
+          document.getElementById('tic-tbody').innerHTML =
+            '<tr><td colspan="10" class="tic-empty">No scan data yet. Click Refresh to run a scan.</td></tr>';
+        }
       }
     } catch {
       setStatus('error');

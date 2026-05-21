@@ -153,6 +153,23 @@ def get_ticker_detail(symbol: str, db: Session = Depends(get_db)):
     return _result_to_dict(r)
 
 
+@app.get("/api/scan/status")
+def scan_status(db: Session = Depends(get_db)):
+    """Current scan state — used by the frontend to show progress."""
+    from scanner import is_scan_running
+    latest_run = (
+        db.query(ScanRun)
+        .order_by(desc(ScanRun.started_at))
+        .first()
+    )
+    return {
+        "scanning": is_scan_running(),
+        "last_run_started": latest_run.started_at.isoformat() if latest_run else None,
+        "last_run_completed": latest_run.completed_at.isoformat() if latest_run and latest_run.completed_at else None,
+        "last_run_tickers": latest_run.ticker_count if latest_run else 0,
+    }
+
+
 @app.post("/api/scan/run")
 async def trigger_scan(
     background_tasks: BackgroundTasks,
