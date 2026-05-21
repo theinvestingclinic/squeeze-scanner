@@ -30,12 +30,13 @@ async def _scheduled_discovery():
 def start_scheduler():
     interval = settings.scan_interval_minutes
 
-    # Scan every N minutes, Mon-Fri, 8 AM–5 PM ET
+    # Scan every N minutes, Mon-Fri, 9 AM–5 PM ET
+    # Starts at 9 AM to ensure FINRA discovery (8:30 AM) has finished loading
     scheduler.add_job(
         _scheduled_scan,
         trigger=CronTrigger(
             day_of_week="mon-fri",
-            hour="8-17",
+            hour="9-17",
             minute=f"*/{interval}",
         ),
         id="full_scan",
