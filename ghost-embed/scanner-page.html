@@ -13,9 +13,11 @@
     font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
     color: #0a1a2a;
     background: #fdfbf4;
-    max-width: 1100px;
-    margin: 0 auto;
-    padding: 0 0 80px;
+    /* Break out of Ghost's content column so the table has room to breathe */
+    width: 100vw !important;
+    margin-left: calc(50% - 50vw) !important;
+    padding: 0 max(16px, calc(50vw - 560px)) 80px;
+    box-sizing: border-box;
   }
 
   /* Header */
@@ -536,6 +538,20 @@
         <h3>The Squeeze Score</h3>
         <p>When a stock gets SQUEEZED, it's not magic.  It's math.  Short sellers borrowed shares and bet the price would fall.  When they're wrong, they have to BUY those shares back fast.  That forced buying is what sends a stock up 50%, 100%, sometimes more in a matter of days.</p>
         <p>The Squeeze Score combines all the signals below into a single number from 0 to 100.  Above 60 means the ingredients are in place.  Above 75 means we're watching closely.  When we see a 75+ score with the stock breaking key levels on heavy VOLUME that's when Discord gets the alert.</p>
+        <p>The score is split into two parts you'll see in the table: a <strong>Setup Score</strong> and a <strong>Trigger Score</strong>.  Read on to understand what each one means.</p>
+      </div>
+
+      <div class="tic-edu-card">
+        <div class="tic-edu-icon">🧱</div>
+        <h3>Setup Score vs Trigger Score</h3>
+        <p>A Setup Score tells you the powder is loaded.  SHORT INTEREST is high, FLOAT is small, options traders are positioning above the current price.  The conditions for a SQUEEZE exist.  But the fuse hasn't been lit yet.</p>
+        <p>A Trigger Score tells you the fuse is burning.  CALL VOLUME is spiking today.  The stock is breaking above key price levels.  RELATIVE VOLUME is elevated.  GAMMA is negative.  The stock is moving and the structural forces are amplifying it.</p>
+        <p>A high Setup with a low Trigger means watch it closely.  A high Trigger with a low Setup means the move is happening but the fuel may not be there to sustain it.  When both are high at the same time that's the setup we're looking for.</p>
+        <div class="tic-edu-levels">
+          <span class="tic-lvl low">High Setup only — Watching</span>
+          <span class="tic-lvl mid">High Trigger only — Active but thin</span>
+          <span class="tic-lvl hot">Both high — Full setup</span>
+        </div>
       </div>
 
       <div class="tic-edu-card">
@@ -766,10 +782,12 @@
     const labels = {short_interest:'Short interest',float:'Float',call_oi_concentration:'Call OI above spot',short_sale_flow:'Short sale flow',call_volume:'Call vol ratio',gamma:'Gamma (magnitude)',price_trend:'Price trend',near_term_iv_rank:'Near-term IV rank',level_break:'Level break',relative_volume:'Rel volume',reddit_danger:'Reddit danger',already_squeezed:'Already squeezed'};
     const dq = bd._data_quality || {};
     const qFlags = [
-      !dq.has_short_data   ? '⚠ Short data unavailable'              : null,
-      !dq.has_options_data ? '⚠ Options data unavailable'            : null,
-      !dq.has_finra_data   ? '⚠ FINRA ratio not loaded yet'          : null,
-      !dq.has_reddit_data  ? '⚠ Reddit signal off (no credentials)'  : null,
+      !dq.has_short_data    ? '⚠ Short data unavailable'                                          : null,
+      !dq.has_options_data  ? '⚠ Options data unavailable'                                        : null,
+      !dq.has_finra_data    ? '⚠ FINRA ratio not loaded yet'                                      : null,
+      !dq.has_reddit_data   ? '⚠ Reddit signal off (no credentials)'                              : null,
+      dq.signals_calibrated ? `✓ Calibrated on ${dq.history_points} historical scans`             :
+                              `◷ Proxy mode — calibrates after ${5 - (dq.history_points||0)} more scans`,
     ].filter(Boolean);
     const qHtml = qFlags.length
       ? '<div style="margin-bottom:10px">' + qFlags.map(f =>

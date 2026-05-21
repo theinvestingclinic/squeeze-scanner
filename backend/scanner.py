@@ -13,6 +13,7 @@ from short_data import get_short_data
 from gamma import get_gamma_data
 from volume_profile import get_volume_zones
 from social_data import get_reddit_saturation
+from historical import get_historical_stats
 from scoring import calculate_score
 from ticker_universe import get_ticker_universe
 
@@ -69,6 +70,7 @@ def scan_ticker(ticker: str) -> dict | None:
         }
 
         data = _normalize(data)
+        data["_hist"] = get_historical_stats(ticker)
         score, breakdown = calculate_score(data)
         data["score"] = score
         data["setup_score"] = breakdown.get("setup_score", 0)

@@ -39,15 +39,25 @@ def calculate_score(data: dict) -> tuple[float, dict]:
     else:               float_pts = 0
     breakdown["float"] = float_pts
 
-    # Call OI concentration above spot (0-10)
-    # Measures % of total call OI sitting above the current price — NOT an OI delta.
-    # Renamed from call_oi_pct_change to reflect what it actually measures.
+    # Call OI concentration / delta (0-10)
+    # When history exists: score the CHANGE in concentration vs prior scan (true buildup).
+    # Fallback: raw concentration above spot.
     oi_conc = data.get("call_oi_pct_change", 0) or 0
-    if oi_conc >= 20:   oi_pts = 10
-    elif oi_conc >= 10: oi_pts = 6
-    elif oi_conc >= 5:  oi_pts = 3
-    else:               oi_pts = 0
-    breakdown["call_oi_concentration"] = oi_pts
+    oi_prev = hist.get("call_oi_prev")
+    if oi_prev is not None:
+        oi_delta = oi_conc - oi_prev
+        if oi_delta >= 10:   oi_pts = 10
+        elif oi_delta >= 5:  oi_pts = 6
+        elif oi_delta >= 2:  oi_pts = 3
+        else:                oi_pts = 0
+        breakdown["call_oi_delta"] = round(oi_delta, 1)
+        breakdown["call_oi_concentration"] = oi_pts
+    else:
+        if oi_conc >= 20:   oi_pts = 10
+        elif oi_conc >= 10: oi_pts = 6
+        elif oi_conc >= 5:  oi_pts = 3
+        else:               oi_pts = 0
+        breakdown["call_oi_concentration"] = oi_pts
 
     # FINRA daily short sale flow (0-7)
     # Kept separate from bi-weekly short interest. FINRA explicitly distinguishes
@@ -64,12 +74,24 @@ def calculate_score(data: dict) -> tuple[float, dict]:
 
     # ── TRIGGER SIGNALS ───────────────────────────────────────────────────────
 
-    # Call volume ratio (0-15) — proxy: today's volume vs OI/20 estimate
-    cvr = data.get("call_volume_ratio", 0) or 0
-    if cvr >= 5:     cv_pts = 15
-    elif cvr >= 3:   cv_pts = 10
-    elif cvr >= 1.5: cv_pts = 6
-    else:            cv_pts = 0
+    # Call volume (0-15)
+    # When history exists: z-score vs ticker's own baseline (more accurate).
+    # Fallback: ratio vs OI/20 proxy.
+    hist = data.get("_hist", {})
+    cvr  = data.get("call_volume_ratio", 0) or 0
+    if hist.get("call_vol_std", 0) > 0:
+        zscore = (cvr - hist["call_vol_mean"]) / hist["call_vol_std"]
+        if zscore >= 3:    cv_pts = 15
+        elif zscore >= 2:  cv_pts = 10
+        elif zscore >= 1:  cv_pts = 6
+        elif zscore >= 0:  cv_pts = 2
+        else:              cv_pts = 0
+        breakdown["call_vol_zscore"] = round(zscore, 2)
+    else:
+        if cvr >= 5:     cv_pts = 15
+        elif cvr >= 3:   cv_pts = 10
+        elif cvr >= 1.5: cv_pts = 6
+        else:            cv_pts = 0
     breakdown["call_volume"] = cv_pts
 
     # Gamma — continuous log-scaled score (0-12)
@@ -88,9 +110,18 @@ def calculate_score(data: dict) -> tuple[float, dict]:
     trend = round(min(max(data.get("price_trend_score", 0) or 0, 0), 10), 1)
     breakdown["price_trend"] = trend
 
-    # Near-term IV rank (0-8)
-    # Compares current expiration IV to nearby expirations — NOT historical percentile.
-    iv_rank = data.get("iv_percentile", 0) or 0
+    # IV rank (0-8)
+    # When 30-day history exists: true rank within our own accumulated IV range.
+    # Fallback: cross-expiration proxy.
+    iv_raw = data.get("iv_percentile", 0) or 0
+    iv_min = hist.get("iv_30d_min", 0)
+    iv_max = hist.get("iv_30d_max", 0)
+    if iv_max > iv_min:
+        iv_rank = round((iv_raw - iv_min) / (iv_max - iv_min) * 100, 1)
+        breakdown["iv_source"] = "30d_history"
+    else:
+        iv_rank = iv_raw
+        breakdown["iv_source"] = "expiry_proxy"
     if iv_rank >= 80:   iv_pts = 8
     elif iv_rank >= 60: iv_pts = 5
     elif iv_rank >= 40: iv_pts = 2
@@ -125,12 +156,15 @@ def calculate_score(data: dict) -> tuple[float, dict]:
     # ── DATA QUALITY FLAGS ────────────────────────────────────────────────────
     # Missing data should read as "unknown", not "clear" or neutral.
 
+    history_pts = hist.get("history_points", 0)
     breakdown["_data_quality"] = {
         "has_short_data":   si > 0,
         "has_options_data": data.get("call_volume_ratio", 0) > 0,
         "has_finra_data":   data.get("finra_short_vol_ratio") is not None,
         "has_reddit_data":  data.get("reddit_data_available", False),
         "short_data_note":  "bi-weekly" if si > 0 else "unavailable",
+        "history_points":   history_pts,
+        "signals_calibrated": history_pts >= 5,
     }
 
     # ── TOTALS ────────────────────────────────────────────────────────────────
