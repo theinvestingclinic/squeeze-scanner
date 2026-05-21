@@ -1,7 +1,8 @@
+import asyncio
 import json
-import time
 import logging
-from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import numpy as np
 
@@ -13,6 +14,13 @@ from volume_profile import get_volume_zones
 from social_data import get_reddit_saturation
 from scoring import calculate_score
 from ticker_universe import get_ticker_universe
+
+_executor = ThreadPoolExecutor(max_workers=4)
+_scan_running = False
+
+
+def is_scan_running() -> bool:
+    return _scan_running
 
 log = logging.getLogger(__name__)
 
@@ -106,6 +114,12 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
     Scan the full ticker universe, save results, fire Discord alerts.
     Returns top results sorted by score.
     """
+    global _scan_running
+    if _scan_running:
+        log.info("Scan already running — skipping")
+        return []
+    _scan_running = True
+
     from alerts import send_discord_alert
 
     tickers = get_ticker_universe(include_sp500=False)
@@ -113,40 +127,50 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
 
     results = []
     db = SessionLocal()
+    loop = asyncio.get_event_loop()
 
     try:
         for ticker in tickers:
-            data = scan_ticker(ticker)
+            # Run blocking yfinance calls in thread pool to avoid blocking the event loop
+            data = await loop.run_in_executor(_executor, scan_ticker, ticker)
             if data is None:
                 continue
-
-            # Filter out tickers with no meaningful signal (no options or no price)
             if data.get("price", 0) <= 0:
                 continue
 
             save_result(db, data)
             results.append(data)
 
-            time.sleep(0.1)
+            await asyncio.sleep(0.1)
 
         results.sort(key=lambda x: x.get("score", 0), reverse=True)
 
-        # Fire Discord alerts for high-conviction setups
+        # Fire Discord alerts — deduplicate: skip if alerted within 24h and score hasn't risen 10+
+        alert_cutoff = datetime.utcnow() - timedelta(hours=24)
         for r in results:
-            if r.get("score", 0) >= alert_threshold:
-                sent = await send_discord_alert(r)
-                if sent:
-                    alert = Alert(
-                        ticker=r["ticker"],
-                        score=r["score"],
-                        message=f"Score {r['score']}/100 alert sent",
-                    )
-                    db.add(alert)
-                    db.commit()
+            if r.get("score", 0) < alert_threshold:
+                continue
+            recent = (
+                db.query(Alert)
+                .filter(Alert.ticker == r["ticker"], Alert.sent_at >= alert_cutoff)
+                .order_by(Alert.sent_at.desc())
+                .first()
+            )
+            if recent and (r["score"] - recent.score) < 10:
+                continue  # Already alerted recently, score hasn't risen enough
+            sent = await send_discord_alert(r)
+            if sent:
+                db.add(Alert(
+                    ticker=r["ticker"],
+                    score=r["score"],
+                    message=f"Score {r['score']}/100 alert sent",
+                ))
+                db.commit()
 
         log.info(f"Scan complete. {len(results)} tickers scored. Top score: {results[0]['score'] if results else 0}")
 
     finally:
         db.close()
+        _scan_running = False
 
-    return results[:50]  # Return top 50
+    return results[:50]

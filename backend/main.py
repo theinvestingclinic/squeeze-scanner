@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -64,6 +64,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
+
+def require_admin(x_admin_token: str = Header(default="")):
+    """Protect mutation endpoints. If ADMIN_TOKEN is set in env, enforce it."""
+    if settings.admin_token and x_admin_token != settings.admin_token:
+        raise HTTPException(status_code=401, detail="Invalid admin token")
 
 
 # ── Helper ──────────────────────────────────────────────────────────────────
@@ -146,15 +154,24 @@ def get_ticker_detail(symbol: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/scan/run")
-async def trigger_scan(background_tasks: BackgroundTasks):
+async def trigger_scan(
+    background_tasks: BackgroundTasks,
+    _: None = Depends(require_admin),
+):
     """Manually trigger a full scan (runs in background)."""
-    from scanner import run_full_scan
+    from scanner import run_full_scan, is_scan_running
+    if is_scan_running():
+        return {"message": "Scan already running", "time": datetime.utcnow().isoformat()}
     background_tasks.add_task(run_full_scan, settings.alert_threshold)
     return {"message": "Scan started", "time": datetime.utcnow().isoformat()}
 
 
 @app.post("/api/scan/ticker/{symbol}")
-async def scan_single_ticker(symbol: str, db: Session = Depends(get_db)):
+async def scan_single_ticker(
+    symbol: str,
+    db: Session = Depends(get_db),
+    _: None = Depends(require_admin),
+):
     """Scan a single ticker on demand."""
     from scanner import scan_ticker, save_result
     data = scan_ticker(symbol.upper())
@@ -165,7 +182,10 @@ async def scan_single_ticker(symbol: str, db: Session = Depends(get_db)):
 
 
 @app.post("/api/discovery/run")
-async def trigger_discovery(background_tasks: BackgroundTasks):
+async def trigger_discovery(
+    background_tasks: BackgroundTasks,
+    _: None = Depends(require_admin),
+):
     """Manually trigger the FINRA ticker discovery sweep."""
     from ticker_discovery import run_discovery
     from database import SessionLocal

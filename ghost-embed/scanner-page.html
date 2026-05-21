@@ -5,7 +5,7 @@
 -->
 
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,400;0,600;0,700;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
 
   .tic-scanner * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -483,7 +483,7 @@
           </tr>
         </thead>
         <tbody id="tic-tbody">
-          <tr><td colspan="11" class="tic-empty">Loading scan results…</td></tr>
+          <tr><td colspan="8" class="tic-empty">Loading scan results…</td></tr>
         </tbody>
       </table>
     </div>
@@ -625,15 +625,18 @@
     btn.textContent = '⏳ Scanning…';
     setStatus('scanning');
 
+    // Capture timestamp before scan starts so we can detect when new data arrives
+    const startedFrom = lastScannedAt;
+
     try {
       await fetch(API + '/api/scan/run', { method: 'POST' });
     } catch { /* fire and forget */ }
 
-    // Poll every 4 seconds until scanned_at changes (scan finished)
+    // Poll every 4 seconds until scanned_at changes from pre-scan value
     clearInterval(pollTimer);
     pollTimer = setInterval(async () => {
       await load();
-      if (all.length && all[0].scanned_at !== lastScannedAt) {
+      if (all.length && all[0].scanned_at !== startedFrom) {
         clearInterval(pollTimer);
         btn.disabled = false;
         btn.textContent = '↻ Refresh';
@@ -666,7 +669,7 @@
     } catch {
       setStatus('error');
       document.getElementById('tic-tbody').innerHTML =
-        '<tr><td colspan="11" class="tic-empty" style="color:#dc2626">Could not reach scanner. Try refreshing.</td></tr>';
+        '<tr><td colspan="8" class="tic-empty" style="color:#dc2626">Could not reach scanner. Try refreshing.</td></tr>';
     }
   }
 
@@ -695,7 +698,7 @@
     const rows = all.filter(r => r.score >= min && (!q || r.ticker.includes(q)));
     const tbody = document.getElementById('tic-tbody');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="11" class="tic-empty">No results match your filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="tic-empty">No results match your filters.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(r => `

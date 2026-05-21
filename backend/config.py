@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     reddit_client_id: str = ""
     reddit_client_secret: str = ""
     reddit_user_agent: str = "SqueezeScanner/1.0"
+    admin_token: str = ""
     alert_threshold: int = 75
     scan_interval_minutes: int = 30
     database_url: str = "sqlite:////data/scanner.db"
