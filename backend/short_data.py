@@ -1,12 +1,22 @@
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, date
+
+# { ticker: (fetch_date, result_dict) }
+_cache: dict[str, tuple[date, dict]] = {}
 
 
 def get_short_data(ticker: str) -> dict:
     """
     Fetch short interest and float from Yahoo Finance.
-    Yahoo aggregates NASDAQ/NYSE exchange data — refreshes bi-weekly.
+    Data is cached for the calendar day — short interest is bi-weekly so
+    re-fetching intraday adds latency with no new information.
     """
+    today = date.today()
+    if ticker in _cache:
+        cached_date, cached_result = _cache[ticker]
+        if cached_date == today:
+            return cached_result
+
     result = {
         "short_interest_pct": 0.0,
         "shares_short": 0,
@@ -25,7 +35,6 @@ def get_short_data(ticker: str) -> dict:
             result["shares_short"] = shares_short
             result["float_shares_m"] = round(float_shares / 1_000_000, 2)
 
-        # Yahoo reports the date the data is current through
         short_date = info.get("dateShortInterest")
         if short_date:
             result["short_data_date"] = datetime.fromtimestamp(short_date).strftime("%Y-%m-%d")
@@ -33,4 +42,5 @@ def get_short_data(ticker: str) -> dict:
     except Exception:
         pass
 
+    _cache[ticker] = (today, result)
     return result
