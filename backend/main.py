@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, func
 
 from config import settings
 from database import create_tables, get_db, ScanResult, Alert, SessionLocal
@@ -109,21 +109,25 @@ def get_scan_results(
     db: Session = Depends(get_db),
 ):
     """Latest scan results sorted by score descending."""
+    # Subquery: most recent scanned_at per ticker
+    latest = (
+        db.query(ScanResult.ticker, func.max(ScanResult.scanned_at).label("max_at"))
+        .group_by(ScanResult.ticker)
+        .subquery()
+    )
     rows = (
         db.query(ScanResult)
+        .join(
+            latest,
+            (ScanResult.ticker == latest.c.ticker)
+            & (ScanResult.scanned_at == latest.c.max_at),
+        )
         .filter(ScanResult.score >= min_score)
-        .order_by(desc(ScanResult.score), desc(ScanResult.scanned_at))
+        .order_by(desc(ScanResult.score))
         .limit(limit)
         .all()
     )
-    # Return only the most recent result per ticker
-    seen = set()
-    results = []
-    for r in rows:
-        if r.ticker not in seen:
-            seen.add(r.ticker)
-            results.append(_result_to_dict(r))
-    return {"results": results, "count": len(results)}
+    return {"results": [_result_to_dict(r) for r in rows], "count": len(rows)}
 
 
 @app.get("/api/ticker/{symbol}")
