@@ -11,19 +11,20 @@ def get_sp500_tickers() -> list[str]:
 
 
 # High short interest / squeeze-prone small and mid caps — seed list
+# Dead/delisted tickers removed: BBBY, WISH, RIDE, AGTC, FFIE, GREE, HYZN, HLBZ, EEENF, GXII, HYLN, GOEV, ARVL
 SQUEEZE_WATCHLIST = [
     # Perennial squeeze candidates
-    "GME", "AMC", "BBBY", "CLOV", "WISH", "WKHS", "RKT", "SPCE", "NKLA", "RIDE",
-    "CRIS", "SNDL", "EXPR", "KOSS", "BB", "NOK", "TLRY", "AGTC", "PXMD", "FFIE",
+    "GME", "AMC", "CLOV", "WKHS", "RKT", "SPCE", "NKLA",
+    "CRIS", "SNDL", "EXPR", "KOSS", "BB", "NOK", "TLRY", "PXMD",
     # Biotech / small cap with high short interest potential
     "NVAX", "SRPT", "MARA", "RIOT", "HUT", "BTBT", "ARBK", "CIFR", "CLSK",
-    # Recent meme / options-heavy
-    "SOFI", "LCID", "RIVN", "AFRM", "HOOD", "DKNG", "UWMC", "RDW", "OPAD",
-    "PRPL", "BARK", "GREE", "HYZN", "XELA", "HLBZ", "BIOR", "ATER", "SDC",
-    "BGFV", "ICAD", "EEENF", "GFAI", "VERB", "CXAI", "ILUS", "GROM", "GXII",
+    # Meme / options-heavy
+    "SOFI", "LCID", "RIVN", "AFRM", "HOOD", "DKNG", "UWMC", "OPAD",
+    "PRPL", "BARK", "XELA", "BIOR", "ATER", "SDC", "BGFV", "ICAD",
+    "GFAI", "VERB", "CXAI", "ILUS", "GROM",
     # Mid cap / macro-sensitive
-    "PLTR", "OPEN", "CHPT", "BLNK", "FCEL", "PLUG", "BE", "HYLN", "GOEV",
-    "ARVL", "NURO", "IDEX", "HPNN", "AIXI", "AITX",
+    "PLTR", "OPEN", "CHPT", "BLNK", "FCEL", "PLUG", "BE",
+    "NURO", "IDEX", "HPNN", "AIXI", "AITX",
 ]
 
 def get_discovered_tickers() -> list[str]:

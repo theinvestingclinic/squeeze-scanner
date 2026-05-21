@@ -56,7 +56,7 @@ def _filter_candidates(df: pd.DataFrame) -> list[str]:
     df["short_ratio"] = df["ShortVolume"] / df["TotalVolume"].replace(0, 1)
 
     candidates = df[
-        (df["short_ratio"] >= 0.50) &
+        (df["short_ratio"] >= 0.40) &
         (df["TotalVolume"] >= 500_000) &
         (df["Symbol"].str.match(r'^[A-Z]{1,5}$', na=False))  # plain ticker symbols only
     ]
@@ -91,7 +91,7 @@ async def run_discovery(db: Session) -> list[str]:
     now = datetime.utcnow()
     new_tickers = []
 
-    for ticker in candidates[:150]:  # cap to control scan time
+    for ticker in candidates[:200]:  # cap to control scan time
         existing = db.query(DiscoveredTicker).filter_by(ticker=ticker).first()
         if existing:
             existing.last_seen_at = now
