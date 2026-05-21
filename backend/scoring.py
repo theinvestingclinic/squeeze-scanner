@@ -25,6 +25,16 @@ def calculate_score(data: dict) -> tuple[float, dict]:
         si_pts = 7
     else:
         si_pts = 0
+
+    # FINRA daily short volume: if shorts are actively piling in today, boost up to +5
+    finra_ratio = data.get("finra_short_vol_ratio") or 0
+    if finra_ratio >= 0.70:
+        si_pts = min(si_pts + 5, 25)
+    elif finra_ratio >= 0.60:
+        si_pts = min(si_pts + 3, 25)
+    elif finra_ratio >= 0.50:
+        si_pts = min(si_pts + 1, 25)
+
     breakdown["short_interest"] = si_pts
     score += si_pts
 

@@ -14,6 +14,14 @@ log = logging.getLogger(__name__)
 # FINRA publishes daily short volume for all exchange-listed securities
 FINRA_URL = "https://cdn.finra.org/equity/regsho/daily/CNMSshvol{date}.txt"
 
+# { ticker: short_vol_ratio } — populated each morning by run_discovery()
+_finra_ratios: dict[str, float] = {}
+
+
+def get_finra_short_ratio(ticker: str) -> float | None:
+    """Return today's FINRA short volume ratio for a ticker, or None if not available."""
+    return _finra_ratios.get(ticker)
+
 
 def _last_trading_day() -> str:
     et = ZoneInfo("America/New_York")
@@ -64,6 +72,16 @@ async def run_discovery(db: Session) -> list[str]:
     """
     try:
         df = await _fetch_finra_short_volume()
+
+        # Cache ratios for all tickers so short_data.py can look them up
+        global _finra_ratios
+        df2 = df.copy()
+        df2["ShortVolume"] = pd.to_numeric(df2["ShortVolume"], errors="coerce").fillna(0)
+        df2["TotalVolume"] = pd.to_numeric(df2["TotalVolume"], errors="coerce").fillna(0)
+        df2["short_ratio"] = df2["ShortVolume"] / df2["TotalVolume"].replace(0, 1)
+        _finra_ratios = dict(zip(df2["Symbol"], df2["short_ratio"].round(4)))
+        log.info(f"FINRA ratios cached for {len(_finra_ratios)} tickers")
+
         candidates = _filter_candidates(df)
         log.info(f"FINRA discovery: {len(candidates)} candidates after filtering")
     except Exception as e:

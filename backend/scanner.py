@@ -89,6 +89,7 @@ def save_result(db: Session, data: dict) -> ScanResult:
         zero_gamma=data.get("zero_gamma"),
         net_gex=data.get("net_gex", 0),
         volume_zones=json.dumps(data.get("volume_zones", [])),
+        finra_short_vol_ratio=data.get("finra_short_vol_ratio"),
         reddit_saturation=data.get("reddit_saturation", 0),
         price_change_30d=data.get("price_change_30d", 0),
         score_breakdown=json.dumps(data.get("score_breakdown", {})),

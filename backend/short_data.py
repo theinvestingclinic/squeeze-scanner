@@ -1,5 +1,6 @@
 import yfinance as yf
 from datetime import datetime, date
+from ticker_discovery import get_finra_short_ratio
 
 # { ticker: (fetch_date, result_dict) }
 _cache: dict[str, tuple[date, dict]] = {}
@@ -22,6 +23,7 @@ def get_short_data(ticker: str) -> dict:
         "shares_short": 0,
         "float_shares_m": 0.0,
         "short_data_date": None,
+        "finra_short_vol_ratio": get_finra_short_ratio(ticker),
     }
 
     try:

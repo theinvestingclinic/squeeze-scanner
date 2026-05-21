@@ -609,15 +609,46 @@
   const API = 'https://squeeze-scanner-production.up.railway.app';
   let all = [];
 
+  let lastScannedAt = null;
+  let pollTimer = null;
+
   load();
   setInterval(load, 60000);
-  document.getElementById('tic-refresh').addEventListener('click', load);
+  document.getElementById('tic-refresh').addEventListener('click', triggerScan);
   document.getElementById('tic-close').addEventListener('click', closeDetail);
   document.getElementById('tic-search').addEventListener('input', render);
   document.getElementById('tic-filter').addEventListener('change', render);
 
-  async function load() {
+  async function triggerScan() {
+    const btn = document.getElementById('tic-refresh');
+    btn.disabled = true;
+    btn.textContent = '⏳ Scanning…';
     setStatus('scanning');
+
+    try {
+      await fetch(API + '/api/scan/run', { method: 'POST' });
+    } catch { /* fire and forget */ }
+
+    // Poll every 4 seconds until scanned_at changes (scan finished)
+    clearInterval(pollTimer);
+    pollTimer = setInterval(async () => {
+      await load();
+      if (all.length && all[0].scanned_at !== lastScannedAt) {
+        clearInterval(pollTimer);
+        btn.disabled = false;
+        btn.textContent = '↻ Refresh';
+      }
+    }, 4000);
+
+    // Safety valve: re-enable after 3 minutes regardless
+    setTimeout(() => {
+      clearInterval(pollTimer);
+      btn.disabled = false;
+      btn.textContent = '↻ Refresh';
+    }, 180000);
+  }
+
+  async function load() {
     try {
       const res = await fetch(API + '/api/scan?limit=100&min_score=0');
       if (!res.ok) throw new Error();
@@ -627,6 +658,7 @@
       renderStats();
       render();
       if (all.length && all[0].scanned_at) {
+        lastScannedAt = all[0].scanned_at;
         const d = new Date(all[0].scanned_at + 'Z');
         document.getElementById('tic-last-scan').textContent =
           'Last scan: ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -707,6 +739,7 @@
       ['Zero gamma',  d.zero_gamma ? '$'+d.zero_gamma : 'N/A'],
       ['Environment', d.is_negative_gamma ? '⚡ Negative' : 'Positive'],
       ['IV %ile',     d.iv_percentile ? d.iv_percentile+'%' : '—'],
+      ['FINRA short vol', d.finra_short_vol_ratio ? Math.round(d.finra_short_vol_ratio*100)+'% today' : '—'],
     ].map(([k,v]) =>
       `<div class="tic-kv"><span class="tic-kv-k">${k}</span><span class="tic-kv-v">${v}</span></div>`
     ).join('');

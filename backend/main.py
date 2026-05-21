@@ -90,6 +90,7 @@ def _result_to_dict(r: ScanResult) -> dict:
         "volume_zones": json.loads(r.volume_zones or "[]"),
         "reddit_saturation": r.reddit_saturation,
         "price_change_30d": r.price_change_30d,
+        "finra_short_vol_ratio": r.finra_short_vol_ratio,
         "score_breakdown": json.loads(r.score_breakdown or "{}"),
         "scanned_at": r.scanned_at.isoformat() if r.scanned_at else None,
     }

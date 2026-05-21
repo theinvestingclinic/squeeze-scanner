@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean
+from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 from config import settings
@@ -40,6 +40,9 @@ class ScanResult(Base):
     # Volume zones (JSON list)
     volume_zones = Column(Text, default="[]")
 
+    # Daily short signal from FINRA (short volume / total volume)
+    finra_short_vol_ratio = Column(Float, nullable=True)
+
     # Danger
     reddit_saturation = Column(Float, default=0)
     price_change_30d = Column(Float, default=0)
@@ -74,6 +77,16 @@ class DiscoveredTicker(Base):
 
 def create_tables():
     Base.metadata.create_all(bind=engine)
+    # Add new columns to existing DBs without losing data
+    with engine.connect() as conn:
+        for col, ddl in [
+            ("finra_short_vol_ratio", "ALTER TABLE scan_results ADD COLUMN finra_short_vol_ratio REAL"),
+        ]:
+            try:
+                conn.execute(text(ddl))
+                conn.commit()
+            except Exception:
+                pass  # Column already exists
 
 
 def get_db():
