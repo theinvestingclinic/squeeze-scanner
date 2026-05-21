@@ -20,6 +20,7 @@ def calculate_score(data: dict) -> tuple[float, dict]:
     (high SI, small float) does not look the same as an active breakout.
     """
     breakdown = {}
+    hist = data.get("_hist", {})
 
     # ── SETUP SIGNALS ─────────────────────────────────────────────────────────
 
@@ -77,7 +78,6 @@ def calculate_score(data: dict) -> tuple[float, dict]:
     # Call volume (0-15)
     # When history exists: z-score vs ticker's own baseline (more accurate).
     # Fallback: ratio vs OI/20 proxy.
-    hist = data.get("_hist", {})
     cvr  = data.get("call_volume_ratio", 0) or 0
     if hist.get("call_vol_std", 0) > 0:
         zscore = (cvr - hist["call_vol_mean"]) / hist["call_vol_std"]
