@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
 import numpy as np
 
-from database import ScanResult, Alert, SessionLocal
+from database import ScanResult, ScanRun, Alert, SessionLocal
 from options_data import get_options_metrics
 from short_data import get_short_data
 from gamma import get_gamma_data
@@ -78,8 +78,9 @@ def scan_ticker(ticker: str) -> dict | None:
         return None
 
 
-def save_result(db: Session, data: dict) -> ScanResult:
+def save_result(db: Session, data: dict, scan_run_id: int | None = None) -> ScanResult:
     result = ScanResult(
+        scan_run_id=scan_run_id,
         ticker=data["ticker"],
         score=data.get("score", 0),
         price=data.get("price", 0),
@@ -130,20 +131,38 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
     loop = asyncio.get_event_loop()
 
     try:
+        # Open a scan run record
+        run = ScanRun(started_at=datetime.utcnow())
+        db.add(run)
+        db.commit()
+        db.refresh(run)
+
         for ticker in tickers:
-            # Run blocking yfinance calls in thread pool to avoid blocking the event loop
             data = await loop.run_in_executor(_executor, scan_ticker, ticker)
             if data is None:
                 continue
             if data.get("price", 0) <= 0:
                 continue
 
-            save_result(db, data)
+            save_result(db, data, scan_run_id=run.id)
             results.append(data)
 
             await asyncio.sleep(0.1)
 
         results.sort(key=lambda x: x.get("score", 0), reverse=True)
+
+        # Mark run complete
+        run.completed_at = datetime.utcnow()
+        run.ticker_count = len(results)
+        db.commit()
+
+        # Prune scan runs older than 7 days to keep DB lean
+        cutoff = datetime.utcnow() - timedelta(days=7)
+        old_runs = db.query(ScanRun).filter(ScanRun.started_at < cutoff).all()
+        for old_run in old_runs:
+            db.query(ScanResult).filter(ScanResult.scan_run_id == old_run.id).delete()
+            db.delete(old_run)
+        db.commit()
 
         # Fire Discord alerts — deduplicate: skip if alerted within 24h and score hasn't risen 10+
         alert_cutoff = datetime.utcnow() - timedelta(hours=24)
@@ -157,7 +176,7 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
                 .first()
             )
             if recent and (r["score"] - recent.score) < 10:
-                continue  # Already alerted recently, score hasn't risen enough
+                continue
             sent = await send_discord_alert(r)
             if sent:
                 db.add(Alert(

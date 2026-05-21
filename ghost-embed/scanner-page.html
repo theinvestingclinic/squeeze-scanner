@@ -757,8 +757,8 @@
 
     const bd = d.score_breakdown || {};
     const maxPts = {short_interest:20,float:10,price_trend:10,call_volume:15,gamma:12,call_oi_buildup:10,iv_expansion:8,level_break:8,relative_volume:7,reddit_danger:15};
-    const labels = {short_interest:'Short interest',float:'Float',price_trend:'Price trend',call_volume:'Call volume',gamma:'Gamma',call_oi_buildup:'Call OI',iv_expansion:'IV expansion',level_break:'Level break',relative_volume:'Rel volume',reddit_danger:'Reddit danger'};
-    document.getElementById('tic-breakdown').innerHTML = Object.entries(bd)
+    const labels = {short_interest:'Short interest',float:'Float',price_trend:'Price trend',call_volume:'Call vol ratio*',gamma:'Gamma',call_oi_buildup:'Call OI above spot*',iv_expansion:'IV rank*',level_break:'Level break',relative_volume:'Rel volume',reddit_danger:'Reddit danger'};
+    document.getElementById('tic-breakdown').innerHTML = '<p style="font-size:11px;color:#a8a09a;margin-bottom:10px">* Proxy signals — see scanner guide below for methodology</p>' + Object.entries(bd)
       .filter(([k]) => k !== 'total')
       .map(([k,pts]) => {
         const pct = Math.min(Math.abs(pts)/(maxPts[k]||10)*100, 100);

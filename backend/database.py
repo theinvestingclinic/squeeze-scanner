@@ -8,10 +8,21 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
+class ScanRun(Base):
+    """One row per completed scan run. ScanResults point to their parent run."""
+    __tablename__ = "scan_runs"
+
+    id = Column(Integer, primary_key=True)
+    started_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    ticker_count = Column(Integer, default=0)
+
+
 class ScanResult(Base):
     __tablename__ = "scan_results"
 
     id = Column(Integer, primary_key=True, index=True)
+    scan_run_id = Column(Integer, nullable=True, index=True)
     ticker = Column(String, index=True)
     score = Column(Float, default=0)
     price = Column(Float, default=0)
@@ -79,8 +90,9 @@ def create_tables():
     Base.metadata.create_all(bind=engine)
     # Add new columns to existing DBs without losing data
     with engine.connect() as conn:
-        for col, ddl in [
-            ("finra_short_vol_ratio", "ALTER TABLE scan_results ADD COLUMN finra_short_vol_ratio REAL"),
+        for ddl in [
+            "ALTER TABLE scan_results ADD COLUMN finra_short_vol_ratio REAL",
+            "ALTER TABLE scan_results ADD COLUMN scan_run_id INTEGER",
         ]:
             try:
                 conn.execute(text(ddl))

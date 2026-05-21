@@ -10,10 +10,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, func
+from sqlalchemy import desc
 
 from config import settings
-from database import create_tables, get_db, ScanResult, Alert, SessionLocal
+from database import create_tables, get_db, ScanResult, ScanRun, Alert, SessionLocal
 from scheduler import start_scheduler, stop_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -117,21 +117,19 @@ def get_scan_results(
     min_score: float = 0,
     db: Session = Depends(get_db),
 ):
-    """Latest scan results sorted by score descending."""
-    # Subquery: most recent scanned_at per ticker
-    latest = (
-        db.query(ScanResult.ticker, func.max(ScanResult.scanned_at).label("max_at"))
-        .group_by(ScanResult.ticker)
-        .subquery()
+    """Results from the latest completed scan run, sorted by score descending."""
+    latest_run = (
+        db.query(ScanRun)
+        .filter(ScanRun.completed_at.isnot(None))
+        .order_by(desc(ScanRun.completed_at))
+        .first()
     )
+    if not latest_run:
+        return {"results": [], "count": 0}
+
     rows = (
         db.query(ScanResult)
-        .join(
-            latest,
-            (ScanResult.ticker == latest.c.ticker)
-            & (ScanResult.scanned_at == latest.c.max_at),
-        )
-        .filter(ScanResult.score >= min_score)
+        .filter(ScanResult.scan_run_id == latest_run.id, ScanResult.score >= min_score)
         .order_by(desc(ScanResult.score))
         .limit(limit)
         .all()
