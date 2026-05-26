@@ -8,6 +8,7 @@ import pandas as pd
 from sqlalchemy.orm import Session
 
 from database import DiscoveredTicker
+from ticker_filters import EXCLUDED_ETF_TICKERS, filter_excluded_tickers
 
 log = logging.getLogger(__name__)
 
@@ -61,7 +62,8 @@ def _filter_candidates(df: pd.DataFrame) -> list[str]:
         (df["Symbol"].str.match(r'^[A-Z]{1,5}$', na=False))  # plain ticker symbols only
     ]
 
-    return candidates.sort_values("TotalVolume", ascending=False)["Symbol"].tolist()
+    symbols = candidates.sort_values("TotalVolume", ascending=False)["Symbol"].tolist()
+    return filter_excluded_tickers(symbols)
 
 
 async def run_discovery(db: Session) -> list[str]:
@@ -90,6 +92,11 @@ async def run_discovery(db: Session) -> list[str]:
 
     now = datetime.utcnow()
     new_tickers = []
+
+    # Retire any fund products discovered before the exclusion list existed.
+    db.query(DiscoveredTicker).filter(
+        DiscoveredTicker.ticker.in_(EXCLUDED_ETF_TICKERS)
+    ).update({"is_active": False}, synchronize_session=False)
 
     for ticker in candidates[:200]:  # cap to control scan time
         existing = db.query(DiscoveredTicker).filter_by(ticker=ticker).first()

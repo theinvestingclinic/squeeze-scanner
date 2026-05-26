@@ -2,6 +2,55 @@ import httpx
 from config import settings
 
 
+def _fmt_price(value) -> str:
+    if value is None:
+        return "N/A"
+    try:
+        return f"${float(value):.2f}"
+    except (TypeError, ValueError):
+        return "N/A"
+
+
+def _trade_levels(price, call_wall, put_wall, zero_gamma, zones) -> tuple[str, str]:
+    if not price:
+        return "N/A", "N/A"
+
+    upside_levels = []
+    for label, level in (("zero gamma", zero_gamma), ("call wall", call_wall)):
+        if level and level > price:
+            upside_levels.append((level, label))
+
+    if upside_levels:
+        level, label = min(upside_levels, key=lambda item: item[0])
+        trigger = f"Break above {label} {_fmt_price(level)} with volume"
+    elif call_wall and price >= call_wall:
+        trigger = f"Hold above call wall {_fmt_price(call_wall)} with expanding volume"
+    elif zero_gamma and price >= zero_gamma:
+        trigger = f"Hold above zero gamma {_fmt_price(zero_gamma)} with expanding volume"
+    else:
+        trigger = f"Break above {_fmt_price(price * 1.03)} with volume"
+
+    risk_levels = []
+    for label, level in (("put wall", put_wall), ("zero gamma", zero_gamma)):
+        if level and level < price:
+            risk_levels.append((level, label))
+
+    for zone in zones or []:
+        low = zone.get("low")
+        high = zone.get("high")
+        if low and high and low <= price:
+            risk_levels.append((low, "volume zone support"))
+            break
+
+    if risk_levels:
+        level, label = max(risk_levels, key=lambda item: item[0])
+        risk = f"Failed hold above {label} {_fmt_price(level)}"
+    else:
+        risk = f"Failed breakout under {_fmt_price(price * 0.95)}"
+
+    return trigger, risk
+
+
 def format_alert(data: dict) -> str:
     ticker = data.get("ticker", "???")
     score = data.get("score", 0)
@@ -35,8 +84,7 @@ def format_alert(data: dict) -> str:
     put_wall_text = f"${put_wall}" if put_wall else "N/A"
     zero_gamma_text = f"${zero_gamma}" if zero_gamma else "N/A"
 
-    trigger_price = round(price * 1.03, 2) if price else "N/A"
-    risk_price = round(price * 0.95, 2) if price else "N/A"
+    trigger_text, risk_text = _trade_levels(price, call_wall, put_wall, zero_gamma, zones)
 
     message = f"""🔥 **Squeeze Radar Alert**
 
@@ -51,8 +99,8 @@ def format_alert(data: dict) -> str:
 🔀 **Zero gamma:** {zero_gamma_text}{zone_text}
 
 📌 **Relative volume:** {rv}x
-🚀 **Trigger:** Break above {trigger_price} with volume
-❌ **Risk:** Failed break under {risk_price}{danger_label}
+🚀 **Trigger:** {trigger_text}
+❌ **Risk:** {risk_text}{danger_label}
 
 *Short data refreshes bi-weekly. Verify before trading.*"""
 

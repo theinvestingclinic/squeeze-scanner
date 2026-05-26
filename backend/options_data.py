@@ -9,6 +9,9 @@ def get_options_metrics(ticker: str) -> dict:
         "iv_percentile": 0.0,
         "breaking_key_level": False,
         "relative_volume": 0.0,
+        "avg_volume_20d": 0.0,
+        "dollar_volume_20d": 0.0,
+        "has_options_data": False,
         "price_trend_score": 0.0,
         "price_change_30d": 0.0,
         "price": 0.0,
@@ -26,6 +29,8 @@ def get_options_metrics(ticker: str) -> dict:
 
         avg_vol_20d = float(volumes.iloc[-21:-1].mean()) if len(volumes) > 21 else float(volumes.mean())
         today_vol = float(volumes.iloc[-1])
+        result["avg_volume_20d"] = round(avg_vol_20d, 0)
+        result["dollar_volume_20d"] = round(avg_vol_20d * spot, 0)
         result["relative_volume"] = round(today_vol / avg_vol_20d if avg_vol_20d > 0 else 0, 2)
 
         if len(closes) >= 22:
@@ -60,6 +65,7 @@ def get_options_metrics(ticker: str) -> dict:
 
         if calls.empty:
             return result
+        result["has_options_data"] = True
 
         today_call_vol = float(calls["volume"].fillna(0).sum())
         avg_call_oi = float(calls["openInterest"].fillna(0).sum())

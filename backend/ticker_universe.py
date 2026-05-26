@@ -1,5 +1,7 @@
 import pandas as pd
 
+from ticker_filters import filter_excluded_tickers
+
 
 # S&P 500 pulled from Wikipedia at startup; falls back to BASE_LIST if unavailable
 def get_sp500_tickers() -> list[str]:
@@ -34,7 +36,7 @@ def get_discovered_tickers() -> list[str]:
         db = SessionLocal()
         try:
             rows = db.query(DiscoveredTicker).filter_by(is_active=True).all()
-            return [r.ticker for r in rows]
+            return filter_excluded_tickers([r.ticker for r in rows])
         finally:
             db.close()
     except Exception:
@@ -43,14 +45,14 @@ def get_discovered_tickers() -> list[str]:
 
 def get_ticker_universe(include_sp500: bool = False) -> list[str]:
     # Start with permanent seed list
-    universe = list(dict.fromkeys(SQUEEZE_WATCHLIST))
+    universe = filter_excluded_tickers(list(dict.fromkeys(SQUEEZE_WATCHLIST)))
 
     # Merge in dynamically discovered tickers from FINRA sweep
     discovered = get_discovered_tickers()
-    universe = list(dict.fromkeys(universe + discovered))
+    universe = filter_excluded_tickers(list(dict.fromkeys(universe + discovered)))
 
     if include_sp500:
         sp500 = get_sp500_tickers()
-        universe = list(dict.fromkeys(universe + sp500))
+        universe = filter_excluded_tickers(list(dict.fromkeys(universe + sp500)))
 
     return universe

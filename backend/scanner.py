@@ -8,6 +8,7 @@ import numpy as np
 
 from config import settings
 from database import ScanResult, ScanRun, Alert, SessionLocal
+from eligibility import ELIGIBLE_COMMON_STOCK, evaluate_eligibility
 from options_data import get_options_metrics
 from short_data import get_short_data
 from gamma import get_gamma_data
@@ -16,9 +17,12 @@ from social_data import get_reddit_saturation
 from historical import get_historical_stats
 from scoring import calculate_score
 from ticker_universe import get_ticker_universe
+from ticker_filters import is_excluded_ticker
 
 _executor = ThreadPoolExecutor(max_workers=4)
 _scan_running = False
+ALERT_MIN_SETUP_SCORE = 20
+ALERT_MIN_TRIGGER_SCORE = 20
 
 
 def is_scan_running() -> bool:
@@ -47,10 +51,23 @@ def _normalize(data: dict) -> dict:
 def scan_ticker(ticker: str) -> dict | None:
     """Fetch all signals for one ticker and return a scored data dict."""
     try:
+        if is_excluded_ticker(ticker):
+            log.info(f"Skipping excluded fund ticker {ticker}")
+            return None
+
         log.info(f"Scanning {ticker}")
 
-        options = get_options_metrics(ticker)
         short = get_short_data(ticker)
+        if short.get("is_fund"):
+            log.info(f"Skipping fund/ETF ticker {ticker}")
+            return None
+
+        options = get_options_metrics(ticker)
+        eligibility = evaluate_eligibility(ticker, short, options)
+        if eligibility["status"] != ELIGIBLE_COMMON_STOCK:
+            log.info(f"Skipping {ticker}: {eligibility['status']} ({eligibility['reason']})")
+            return None
+
         gamma = get_gamma_data(ticker)
         zones = get_volume_zones(ticker)
         reddit_sat = get_reddit_saturation(ticker)
@@ -67,11 +84,14 @@ def scan_ticker(ticker: str) -> dict | None:
             "volume_zones": zones,
             "reddit_saturation": reddit_sat,
             "reddit_data_available": bool(settings.reddit_client_id),
+            "eligibility_status": eligibility["status"],
+            "eligibility": eligibility,
         }
 
         data = _normalize(data)
         data["_hist"] = get_historical_stats(ticker)
         score, breakdown = calculate_score(data)
+        breakdown["_eligibility"] = eligibility
         data["score"] = score
         data["setup_score"] = breakdown.get("setup_score", 0)
         data["trigger_score"] = breakdown.get("trigger_score", 0)
@@ -116,6 +136,27 @@ def save_result(db: Session, data: dict, scan_run_id: int | None = None) -> Scan
     db.commit()
     db.refresh(result)
     return result
+
+
+def should_send_alert(data: dict, alert_threshold: int) -> bool:
+    """Alert only when the setup and trigger are both strong and data is reliable."""
+    if data.get("score", 0) < alert_threshold:
+        return False
+    if data.get("eligibility_status") != ELIGIBLE_COMMON_STOCK:
+        return False
+    if data.get("setup_score", 0) < ALERT_MIN_SETUP_SCORE:
+        return False
+    if data.get("trigger_score", 0) < ALERT_MIN_TRIGGER_SCORE:
+        return False
+    if data.get("short_interest_pct", 0) <= 0:
+        return False
+
+    breakdown = data.get("score_breakdown") or {}
+    if breakdown.get("already_squeezed", 0) < 0:
+        return False
+
+    quality = breakdown.get("_data_quality") or {}
+    return bool(quality.get("has_short_data", False))
 
 
 async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
@@ -175,7 +216,7 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
         # Fire Discord alerts — deduplicate: skip if alerted within 24h and score hasn't risen 10+
         alert_cutoff = datetime.utcnow() - timedelta(hours=24)
         for r in results:
-            if r.get("score", 0) < alert_threshold:
+            if not should_send_alert(r, alert_threshold):
                 continue
             recent = (
                 db.query(Alert)

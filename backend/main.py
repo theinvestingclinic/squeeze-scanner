@@ -14,7 +14,9 @@ from sqlalchemy import desc
 
 from config import settings
 from database import create_tables, get_db, ScanResult, ScanRun, Alert, SessionLocal
+from eligibility import ELIGIBLE_COMMON_STOCK
 from scheduler import start_scheduler, stop_scheduler
+from ticker_filters import EXCLUDED_ETF_TICKERS, is_excluded_ticker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
@@ -77,9 +79,13 @@ def require_admin(x_admin_token: str = Header(default="")):
 # ── Helper ──────────────────────────────────────────────────────────────────
 
 def _result_to_dict(r: ScanResult) -> dict:
+    score_breakdown = json.loads(r.score_breakdown or "{}")
+    eligibility = score_breakdown.get("_eligibility") or {}
     return {
         "id": r.id,
         "ticker": r.ticker,
+        "eligibility_status": eligibility.get("status", "legacy_unknown"),
+        "eligibility": eligibility,
         "score": r.score,
         "setup_score": r.setup_score,
         "trigger_score": r.trigger_score,
@@ -101,9 +107,20 @@ def _result_to_dict(r: ScanResult) -> dict:
         "reddit_saturation": r.reddit_saturation,
         "price_change_30d": r.price_change_30d,
         "finra_short_vol_ratio": r.finra_short_vol_ratio,
-        "score_breakdown": json.loads(r.score_breakdown or "{}"),
+        "score_breakdown": score_breakdown,
         "scanned_at": r.scanned_at.isoformat() if r.scanned_at else None,
     }
+
+
+def _result_is_current_eligible(r: ScanResult) -> bool:
+    if is_excluded_ticker(r.ticker):
+        return False
+    try:
+        score_breakdown = json.loads(r.score_breakdown or "{}")
+    except Exception:
+        return False
+    eligibility = score_breakdown.get("_eligibility") or {}
+    return eligibility.get("status") == ELIGIBLE_COMMON_STOCK
 
 
 # ── Routes ───────────────────────────────────────────────────────────────────
@@ -129,19 +146,24 @@ def get_scan_results(
     if not latest_run:
         return {"results": [], "count": 0}
 
-    rows = (
+    candidate_rows = (
         db.query(ScanResult)
         .filter(ScanResult.scan_run_id == latest_run.id, ScanResult.score >= min_score)
+        .filter(~ScanResult.ticker.in_(EXCLUDED_ETF_TICKERS))
         .order_by(desc(ScanResult.score))
-        .limit(limit)
         .all()
     )
-    return {"results": [_result_to_dict(r) for r in rows], "count": len(rows)}
+    rows = [r for r in candidate_rows if _result_is_current_eligible(r)]
+    results = [_result_to_dict(r) for r in rows[:limit]]
+    return {"results": results, "count": len(rows)}
 
 
 @app.get("/api/ticker/{symbol}")
 def get_ticker_detail(symbol: str, db: Session = Depends(get_db)):
     """Latest scan data for a specific ticker."""
+    if is_excluded_ticker(symbol):
+        raise HTTPException(status_code=404, detail="Ticker is excluded from the squeeze scanner")
+
     r = (
         db.query(ScanResult)
         .filter(ScanResult.ticker == symbol.upper())
@@ -150,6 +172,8 @@ def get_ticker_detail(symbol: str, db: Session = Depends(get_db)):
     )
     if not r:
         raise HTTPException(status_code=404, detail="Ticker not found in scan results")
+    if not _result_is_current_eligible(r):
+        raise HTTPException(status_code=404, detail="Ticker is not eligible for current squeeze scanner")
     return _result_to_dict(r)
 
 
@@ -191,7 +215,11 @@ async def scan_single_ticker(
 ):
     """Scan a single ticker on demand."""
     from scanner import scan_ticker, save_result
-    data = scan_ticker(symbol.upper())
+    symbol = symbol.upper()
+    if is_excluded_ticker(symbol):
+        raise HTTPException(status_code=400, detail="ETFs and funds are excluded from the squeeze scanner")
+
+    data = scan_ticker(symbol)
     if not data:
         raise HTTPException(status_code=400, detail=f"Could not fetch data for {symbol}")
     save_result(db, data)
@@ -225,6 +253,7 @@ def get_discovered_tickers(db: Session = Depends(get_db)):
     rows = db.query(DiscoveredTicker).filter_by(is_active=True).order_by(
         DiscoveredTicker.last_seen_at.desc()
     ).all()
+    rows = [r for r in rows if not is_excluded_ticker(r.ticker)]
     return {
         "count": len(rows),
         "tickers": [

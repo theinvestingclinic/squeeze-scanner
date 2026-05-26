@@ -34,7 +34,8 @@ def calculate_score(data: dict) -> tuple[float, dict]:
 
     # Float (0-10)
     float_m = data.get("float_shares_m", 0) or 0
-    if float_m < 10:    float_pts = 10
+    if float_m <= 0:    float_pts = 0
+    elif float_m < 10:  float_pts = 10
     elif float_m < 50:  float_pts = 6
     elif float_m < 100: float_pts = 3
     else:               float_pts = 0
@@ -159,7 +160,7 @@ def calculate_score(data: dict) -> tuple[float, dict]:
     history_pts = hist.get("history_points", 0)
     breakdown["_data_quality"] = {
         "has_short_data":   si > 0,
-        "has_options_data": data.get("call_volume_ratio", 0) > 0,
+        "has_options_data": data.get("has_options_data", False),
         "has_finra_data":   data.get("finra_short_vol_ratio") is not None,
         "has_reddit_data":  data.get("reddit_data_available", False),
         "short_data_note":  "bi-weekly" if si > 0 else "unavailable",
