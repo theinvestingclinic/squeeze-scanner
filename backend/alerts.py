@@ -1,5 +1,10 @@
+import logging
+
 import httpx
 from config import settings
+
+DISCORD_API_BASE = "https://discord.com/api/v10"
+log = logging.getLogger(__name__)
 
 
 def _fmt_price(value) -> str:
@@ -108,7 +113,8 @@ def format_alert(data: dict) -> str:
 
 
 async def send_discord_alert(data: dict) -> bool:
-    if not settings.discord_webhook_url:
+    url, headers = discord_destination()
+    if not url:
         return False
 
     message = format_alert(data)
@@ -116,10 +122,37 @@ async def send_discord_alert(data: dict) -> bool:
     try:
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                settings.discord_webhook_url,
+                url,
                 json={"content": message},
+                headers=headers,
                 timeout=10,
             )
-            return resp.status_code in (200, 204)
-    except Exception:
+            if resp.status_code in (200, 204):
+                return True
+            log.warning("Discord squeeze alert failed: HTTP %s %s", resp.status_code, resp.text[:300])
+            return False
+    except Exception as exc:
+        log.warning("Discord squeeze alert failed: %s", exc)
         return False
+
+
+def discord_destination() -> tuple[str, dict[str, str]]:
+    """Return the Discord endpoint for squeeze alerts.
+
+    A channel webhook is preferred because it is scoped directly to the alert
+    channel. Bot-token posting remains available for deployments that grant the
+    bot explicit access to the channel.
+    """
+    webhook_url = settings.discord_webhook_url.strip()
+    if webhook_url:
+        return webhook_url.replace("https://discordapp.com/", "https://discord.com/"), {}
+
+    bot_token = settings.discord_bot_token.strip()
+    channel_id = settings.discord_channel_id.strip()
+    if bot_token and channel_id:
+        return (
+            f"{DISCORD_API_BASE}/channels/{channel_id}/messages",
+            {"Authorization": f"Bot {bot_token}"},
+        )
+
+    return "", {}

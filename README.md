@@ -10,7 +10,7 @@ Answers one question: **Where is market structure pressure building?**
 | Gamma map | Call wall, put wall, zero-gamma level (Black-Scholes from yfinance) |
 | Squeeze score | 0–100 model: short interest + float + gamma + options fuel + confirmation |
 | Volume zones | 30-day volume profile clusters (dark pool proxy until UW API added) |
-| Discord alerts | Fires when score ≥ threshold |
+| Discord alerts | Fires when a stock reaches the potential-squeeze alert gate |
 
 ## Quick start
 
@@ -34,14 +34,18 @@ docker-compose up --build
 
 | Variable | Required | Description |
 |---|---|---|
-| `DISCORD_WEBHOOK_URL` | Optional | Discord channel webhook for alerts |
+| `DISCORD_WEBHOOK_URL` | Optional | Discord channel webhook for squeeze alerts; preferred |
+| `DISCORD_BOT_TOKEN` | Optional | Bot token fallback when no webhook is configured |
+| `DISCORD_CHANNEL_ID` | Optional | Bot-token target channel; defaults to `1505287069512237177` |
 | `REDDIT_CLIENT_ID` | Optional | Reddit app client ID (free at reddit.com/prefs/apps) |
 | `REDDIT_CLIENT_SECRET` | Optional | Reddit app secret |
-| `ALERT_THRESHOLD` | No (default 75) | Minimum score to fire a Discord alert |
+| `ALERT_THRESHOLD` | No (default 75) | Minimum squeeze score to fire a Discord alert |
 | `SCAN_INTERVAL_MINUTES` | No (default 30) | How often to scan during market hours |
 | `ALLOWED_ORIGIN` | No | CORS origin for your domain |
 
 Scanner runs without Discord or Reddit configured — those features just silently skip.
+
+Alerts fire from the Short Squeeze Scanner itself after a scan result passes the alert gate: total score at or above `ALERT_THRESHOLD`, setup score at least 20, trigger score at least 20, valid common-stock eligibility, current short-interest data, and no already-squeezed penalty. `DISCORD_WEBHOOK_URL` posts directly to its channel. If no webhook is set, `DISCORD_BOT_TOKEN` posts to `DISCORD_CHANNEL_ID`.
 
 ## API endpoints
 
