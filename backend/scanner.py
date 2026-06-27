@@ -21,8 +21,6 @@ from ticker_filters import is_excluded_ticker
 
 _executor = ThreadPoolExecutor(max_workers=4)
 _scan_running = False
-ALERT_MIN_SETUP_SCORE = 20
-ALERT_MIN_TRIGGER_SCORE = 20
 
 
 def is_scan_running() -> bool:
@@ -139,14 +137,14 @@ def save_result(db: Session, data: dict, scan_run_id: int | None = None) -> Scan
 
 
 def should_send_alert(data: dict, alert_threshold: int) -> bool:
-    """Alert only when the setup and trigger are both strong and data is reliable."""
-    if data.get("score", 0) < alert_threshold:
+    """Alert when a high-confidence or potential squeeze setup is reliable."""
+    if data.get("score", 0) < alert_threshold and not is_potential_squeeze(data):
         return False
     if data.get("eligibility_status") != ELIGIBLE_COMMON_STOCK:
         return False
-    if data.get("setup_score", 0) < ALERT_MIN_SETUP_SCORE:
+    if data.get("setup_score", 0) < settings.alert_min_setup_score:
         return False
-    if data.get("trigger_score", 0) < ALERT_MIN_TRIGGER_SCORE:
+    if data.get("trigger_score", 0) < settings.alert_min_trigger_score:
         return False
     if data.get("short_interest_pct", 0) <= 0:
         return False
@@ -157,6 +155,17 @@ def should_send_alert(data: dict, alert_threshold: int) -> bool:
 
     quality = breakdown.get("_data_quality") or {}
     return bool(quality.get("has_short_data", False))
+
+
+def is_potential_squeeze(data: dict) -> bool:
+    """Secondary alert gate for top scanner candidates before the 75+ hot tier."""
+    return (
+        data.get("score", 0) >= settings.alert_potential_threshold
+        and data.get("setup_score", 0) >= settings.alert_min_setup_score
+        and data.get("trigger_score", 0) >= settings.alert_min_trigger_score
+        and data.get("short_interest_pct", 0) >= settings.alert_min_short_interest_pct
+        and data.get("relative_volume", 0) >= settings.alert_min_relative_volume
+    )
 
 
 async def run_full_scan(alert_threshold: int = 75) -> list[dict]:

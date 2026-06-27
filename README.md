@@ -39,13 +39,18 @@ docker-compose up --build
 | `DISCORD_CHANNEL_ID` | Optional | Bot-token target channel; defaults to `1505287069512237177` |
 | `REDDIT_CLIENT_ID` | Optional | Reddit app client ID (free at reddit.com/prefs/apps) |
 | `REDDIT_CLIENT_SECRET` | Optional | Reddit app secret |
-| `ALERT_THRESHOLD` | No (default 75) | Minimum squeeze score to fire a Discord alert |
+| `ALERT_THRESHOLD` | No (default 75) | Hot-tier squeeze score to fire a Discord alert |
+| `ALERT_POTENTIAL_THRESHOLD` | No (default 50) | Secondary potential-squeeze score gate |
+| `ALERT_MIN_SETUP_SCORE` | No (default 20) | Minimum setup score required for alerts |
+| `ALERT_MIN_TRIGGER_SCORE` | No (default 20) | Minimum trigger score required for alerts |
+| `ALERT_MIN_SHORT_INTEREST_PCT` | No (default 20) | Minimum short interest required for potential-squeeze alerts |
+| `ALERT_MIN_RELATIVE_VOLUME` | No (default 2) | Minimum relative volume required for potential-squeeze alerts |
 | `SCAN_INTERVAL_MINUTES` | No (default 30) | How often to scan during market hours |
 | `ALLOWED_ORIGIN` | No | CORS origin for your domain |
 
 Scanner runs without Discord or Reddit configured — those features just silently skip.
 
-Alerts fire from the Short Squeeze Scanner itself after a scan result passes the alert gate: total score at or above `ALERT_THRESHOLD`, setup score at least 20, trigger score at least 20, valid common-stock eligibility, current short-interest data, and no already-squeezed penalty. `DISCORD_WEBHOOK_URL` posts directly to its channel. If no webhook is set, `DISCORD_BOT_TOKEN` posts to `DISCORD_CHANNEL_ID`.
+Alerts fire from the Short Squeeze Scanner itself after a scan result passes the alert gate. Hot-tier alerts fire at `ALERT_THRESHOLD`. Potential-squeeze alerts can fire below that when the score is at least `ALERT_POTENTIAL_THRESHOLD`, setup and trigger scores are both strong, short interest is elevated, relative volume is active, the ticker is an eligible common stock, current short-interest data exists, and no already-squeezed penalty is present. `DISCORD_WEBHOOK_URL` posts directly to its channel. If no webhook is set, `DISCORD_BOT_TOKEN` posts to `DISCORD_CHANNEL_ID`.
 
 ## API endpoints
 

@@ -10,6 +10,11 @@ class Settings(BaseSettings):
     reddit_user_agent: str = "SqueezeScanner/1.0"
     admin_token: str = ""
     alert_threshold: int = 75
+    alert_potential_threshold: int = 50
+    alert_min_setup_score: float = 20
+    alert_min_trigger_score: float = 20
+    alert_min_short_interest_pct: float = 20
+    alert_min_relative_volume: float = 2
     scan_interval_minutes: int = 30
     database_url: str = "sqlite:////data/scanner.db"
     allowed_origin: str = "https://theinvestingclinic.com"

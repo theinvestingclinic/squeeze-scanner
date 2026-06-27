@@ -36,10 +36,11 @@ class AlertGateTests(unittest.TestCase):
     def wen_style_result(self):
         return {
             "ticker": "WEN",
-            "score": 77.0,
+            "score": 54.3,
             "setup_score": 25.0,
             "trigger_score": 32.7,
             "short_interest_pct": 32.04,
+            "relative_volume": 2.28,
             "eligibility_status": ELIGIBLE_COMMON_STOCK,
             "score_breakdown": {
                 "_data_quality": {"has_short_data": True},
@@ -57,6 +58,12 @@ class AlertGateTests(unittest.TestCase):
 
         self.assertFalse(should_send_alert(weak_setup, 75))
         self.assertFalse(should_send_alert(weak_trigger, 75))
+
+    def test_potential_squeeze_requires_relative_volume(self):
+        low_volume = self.wen_style_result()
+        low_volume["relative_volume"] = 1.9
+
+        self.assertFalse(should_send_alert(low_volume, 75))
 
 
 if __name__ == "__main__":
