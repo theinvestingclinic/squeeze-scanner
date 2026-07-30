@@ -15,7 +15,7 @@ export ALLOWED_ORIGIN="${ALLOWED_ORIGIN:-https://theinvestingclinic.com}"
 export PYTHONUNBUFFERED=1
 export LOG_FILE="${LOG_DIR}/scanner.log"
 
-# Read the Railway webhook from macOS Keychain without copying it into this repo.
+# Read the Discord webhook from macOS Keychain without copying it into this repo.
 if [[ -z "${DISCORD_WEBHOOK_URL:-}" ]]; then
   SCANNER_WEBHOOK_SECRET="$(
     security find-generic-password \
