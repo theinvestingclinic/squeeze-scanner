@@ -50,7 +50,10 @@ def start_scheduler():
     )
     scheduler.add_job(
         _scheduled_scan,
-        trigger=CronTrigger(day_of_week="mon-fri", hour=16, minute=0),
+        # Start just before the close. A 4:00:00 cron callback executes a few
+        # milliseconds after the session boundary and is correctly rejected by
+        # is_scan_window(), which used to skip the intended final pass.
+        trigger=CronTrigger(day_of_week="mon-fri", hour=15, minute=58),
         id="closing_scan",
         replace_existing=True,
         misfire_grace_time=120,
@@ -67,7 +70,7 @@ def start_scheduler():
 
     scheduler.start()
     log.info(
-        "Scheduler started — scans 9:40 AM-4:00 PM ET on open market days; "
+        "Scheduler started — scans 9:40 AM-3:58 PM ET on open market days; "
         "discovery at 8:30 AM ET"
     )
 

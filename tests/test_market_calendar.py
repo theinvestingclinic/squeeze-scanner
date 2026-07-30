@@ -18,6 +18,7 @@ EASTERN = ZoneInfo("America/New_York")
 class MarketCalendarTests(unittest.TestCase):
     def test_regular_session_window(self):
         self.assertTrue(is_scan_window(datetime(2026, 7, 30, 10, 10, tzinfo=EASTERN)))
+        self.assertTrue(is_scan_window(datetime(2026, 7, 30, 15, 58, tzinfo=EASTERN)))
         self.assertFalse(is_scan_window(datetime(2026, 7, 30, 9, 30, tzinfo=EASTERN)))
         self.assertFalse(is_scan_window(datetime(2026, 7, 30, 16, 30, tzinfo=EASTERN)))
 
