@@ -624,49 +624,26 @@
 
 <script>
 (function() {
-  const API = 'https://squeeze-scanner-production.up.railway.app';
+  const API = 'https://scanner-api.theinvestingclinic.com';
   let all = [];
-
-  let lastScannedAt = null;
-  let pollTimer = null;
 
   load();
   setInterval(load, 60000);
-  document.getElementById('tic-refresh').addEventListener('click', triggerScan);
+  document.getElementById('tic-refresh').addEventListener('click', refreshResults);
   document.getElementById('tic-close').addEventListener('click', closeDetail);
   document.getElementById('tic-search').addEventListener('input', render);
   document.getElementById('tic-filter').addEventListener('change', render);
 
-  async function triggerScan() {
+  async function refreshResults() {
     const btn = document.getElementById('tic-refresh');
     btn.disabled = true;
-    btn.textContent = '⏳ Scanning…';
-    setStatus('scanning');
-
-    // Capture timestamp before scan starts so we can detect when new data arrives
-    const startedFrom = lastScannedAt;
-
+    btn.textContent = '⏳ Updating…';
     try {
-      await fetch(API + '/api/scan/run', { method: 'POST' });
-    } catch { /* fire and forget */ }
-
-    // Poll every 4 seconds until scanned_at changes from pre-scan value
-    clearInterval(pollTimer);
-    pollTimer = setInterval(async () => {
       await load();
-      if (all.length && all[0].scanned_at !== startedFrom) {
-        clearInterval(pollTimer);
-        btn.disabled = false;
-        btn.textContent = '↻ Refresh';
-      }
-    }, 4000);
-
-    // Safety valve: re-enable after 3 minutes regardless
-    setTimeout(() => {
-      clearInterval(pollTimer);
+    } finally {
       btn.disabled = false;
       btn.textContent = '↻ Refresh';
-    }, 180000);
+    }
   }
 
   async function load() {
@@ -680,7 +657,6 @@
         setStatus('live');
         renderStats();
         render();
-        lastScannedAt = all[0].scanned_at;
         const d = new Date(all[0].scanned_at + 'Z');
         document.getElementById('tic-last-scan').textContent =
           'Last scan: ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -694,7 +670,7 @@
         } else {
           setStatus('live');
           document.getElementById('tic-tbody').innerHTML =
-            '<tr><td colspan="10" class="tic-empty">No scan data yet. Click Refresh to run a scan.</td></tr>';
+            '<tr><td colspan="10" class="tic-empty">No scan data yet. Waiting for the next scheduled scan.</td></tr>';
         }
       }
     } catch {

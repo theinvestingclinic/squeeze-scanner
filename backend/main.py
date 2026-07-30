@@ -1,8 +1,10 @@
 import json
 import logging
 import asyncio
+import hmac
 from contextlib import asynccontextmanager
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Header
@@ -20,6 +22,7 @@ from ticker_filters import EXCLUDED_ETF_TICKERS, is_excluded_ticker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 async def _startup_scan():
@@ -71,8 +74,10 @@ app.add_middleware(
 # ── Auth ─────────────────────────────────────────────────────────────────────
 
 def require_admin(x_admin_token: str = Header(default="")):
-    """Protect mutation endpoints. If ADMIN_TOKEN is set in env, enforce it."""
-    if settings.admin_token and x_admin_token != settings.admin_token:
+    """Keep mutation endpoints closed unless an explicit admin token is configured."""
+    if not settings.admin_token:
+        raise HTTPException(status_code=503, detail="Admin endpoints are disabled")
+    if not hmac.compare_digest(x_admin_token, settings.admin_token):
         raise HTTPException(status_code=401, detail="Invalid admin token")
 
 
@@ -283,9 +288,9 @@ def get_alerts(limit: int = 20, db: Session = Depends(get_db)):
 
 # ── Serve frontend ────────────────────────────────────────────────────────────
 
-app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 
 
 @app.get("/")
 def serve_frontend():
-    return FileResponse("../frontend/index.html")
+    return FileResponse(FRONTEND_DIR / "index.html")

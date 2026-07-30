@@ -1,7 +1,14 @@
-from pydantic_settings import BaseSettings
+from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+ENV_FILE = Path(__file__).resolve().with_name(".env")
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(env_file=ENV_FILE)
+
     discord_webhook_url: str = ""
     discord_bot_token: str = ""
     discord_channel_id: str = "1505287069512237177"
@@ -18,9 +25,5 @@ class Settings(BaseSettings):
     scan_interval_minutes: int = 30
     database_url: str = "sqlite:////data/scanner.db"
     allowed_origin: str = "https://theinvestingclinic.com"
-
-    class Config:
-        env_file = ".env"
-
 
 settings = Settings()

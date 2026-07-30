@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadResults();
   setInterval(loadResults, 60_000); // refresh every 60s
 
-  document.getElementById('run-scan-btn').addEventListener('click', triggerScan);
+  document.getElementById('run-scan-btn').addEventListener('click', refreshResults);
   document.getElementById('close-detail').addEventListener('click', closeDetail);
   document.getElementById('search-input').addEventListener('input', renderTable);
   document.getElementById('min-score-filter').addEventListener('change', renderTable);
@@ -33,19 +33,14 @@ async function loadResults() {
   }
 }
 
-async function triggerScan() {
+async function refreshResults() {
   const btn = document.getElementById('run-scan-btn');
-  btn.textContent = 'Scanning…';
+  btn.textContent = 'Refreshing…';
   btn.disabled = true;
   try {
-    await fetch(`${API}/api/scan/run`, { method: 'POST' });
-    setTimeout(() => {
-      loadResults();
-      btn.textContent = 'Run Scan Now';
-      btn.disabled = false;
-    }, 3000);
-  } catch {
-    btn.textContent = 'Run Scan Now';
+    await loadResults();
+  } finally {
+    btn.textContent = 'Refresh Results';
     btn.disabled = false;
   }
 }

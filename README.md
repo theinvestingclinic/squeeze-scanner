@@ -39,6 +39,7 @@ docker-compose up --build
 | `DISCORD_CHANNEL_ID` | Optional | Bot-token target channel; defaults to `1505287069512237177` |
 | `REDDIT_CLIENT_ID` | Optional | Reddit app client ID (free at reddit.com/prefs/apps) |
 | `REDDIT_CLIENT_SECRET` | Optional | Reddit app secret |
+| `ADMIN_TOKEN` | Optional | Enables mutation endpoints; if blank, all manual POST endpoints return 503 |
 | `ALERT_THRESHOLD` | No (default 75) | Hot-tier squeeze score to fire a Discord alert |
 | `ALERT_POTENTIAL_THRESHOLD` | No (default 50) | Secondary potential-squeeze score gate |
 | `ALERT_MIN_SETUP_SCORE` | No (default 20) | Minimum setup score required for alerts |
@@ -58,8 +59,8 @@ Alerts fire from the Short Squeeze Scanner itself after a scan result passes the
 |---|---|---|
 | GET | `/api/scan` | Latest results, sorted by score |
 | GET | `/api/ticker/:symbol` | Detail for one ticker |
-| POST | `/api/scan/run` | Trigger a manual scan |
-| POST | `/api/scan/ticker/:symbol` | Scan one ticker on demand |
+| POST | `/api/scan/run` | Trigger a manual scan; requires `X-Admin-Token` |
+| POST | `/api/scan/ticker/:symbol` | Scan one ticker on demand; requires `X-Admin-Token` |
 | GET | `/api/alerts` | Recent Discord alerts sent |
 
 ## Scoring model
@@ -93,3 +94,17 @@ The FastAPI backend serves the frontend at `/`. For theinvestingclinic.com:
 **Option B — embed**: Deploy backend, add `<iframe src="https://scanner.theinvestingclinic.com" />` to any page.
 
 **Option C — same server**: Set `ALLOWED_ORIGIN=https://theinvestingclinic.com` and call the API from your existing frontend.
+
+## Running on an always-on Mac
+
+`scripts/run-macos.sh` starts the API on localhost and stores SQLite data in
+the ignored `data/` directory. Install `deploy/macos/com.theinvestingclinic.squeeze-scanner.plist`
+in `~/Library/LaunchAgents/` to start it at login and restart it after failures.
+Use a named Cloudflare Tunnel to publish `http://127.0.0.1:8000` without opening
+a router port. The production tunnel publishes
+`https://scanner-api.theinvestingclinic.com`.
+
+On this desktop, the startup wrapper reads the scanner's Discord webhook from
+the macOS Keychain item
+`com.theinvestingclinic.squeeze-scanner.discord-webhook`. The webhook is never
+copied into this repository or a launch-agent plist.
