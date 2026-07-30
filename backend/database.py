@@ -73,8 +73,14 @@ class Alert(Base):
     id = Column(Integer, primary_key=True, index=True)
     ticker = Column(String, index=True)
     score = Column(Float)
+    price_at_alert = Column(Float, nullable=True)
     message = Column(Text)
     sent_at = Column(DateTime, default=datetime.utcnow)
+    return_1d = Column(Float, nullable=True)
+    return_5d = Column(Float, nullable=True)
+    max_favorable_5d = Column(Float, nullable=True)
+    max_drawdown_5d = Column(Float, nullable=True)
+    evaluated_at = Column(DateTime, nullable=True)
 
 
 class DiscoveredTicker(Base):
@@ -97,6 +103,12 @@ def create_tables():
             "ALTER TABLE scan_results ADD COLUMN scan_run_id INTEGER",
             "ALTER TABLE scan_results ADD COLUMN setup_score REAL",
             "ALTER TABLE scan_results ADD COLUMN trigger_score REAL",
+            "ALTER TABLE alerts ADD COLUMN price_at_alert REAL",
+            "ALTER TABLE alerts ADD COLUMN return_1d REAL",
+            "ALTER TABLE alerts ADD COLUMN return_5d REAL",
+            "ALTER TABLE alerts ADD COLUMN max_favorable_5d REAL",
+            "ALTER TABLE alerts ADD COLUMN max_drawdown_5d REAL",
+            "ALTER TABLE alerts ADD COLUMN evaluated_at DATETIME",
         ]:
             try:
                 conn.execute(text(ddl))

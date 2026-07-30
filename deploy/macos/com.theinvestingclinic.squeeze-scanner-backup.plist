@@ -3,24 +3,23 @@
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>com.theinvestingclinic.squeeze-scanner</string>
+  <string>com.theinvestingclinic.squeeze-scanner-backup</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/hollywoodclaw/squeeze-scanner/scripts/run-macos.sh</string>
+    <string>/Users/hollywoodclaw/squeeze-scanner/scripts/backup-db.sh</string>
   </array>
   <key>WorkingDirectory</key>
   <string>/Users/hollywoodclaw/squeeze-scanner</string>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>KeepAlive</key>
-  <true/>
-  <key>ThrottleInterval</key>
-  <integer>10</integer>
-  <key>ProcessType</key>
-  <string>Background</string>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>18</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
   <key>StandardOutPath</key>
   <string>/dev/null</string>
   <key>StandardErrorPath</key>
-  <string>/Users/hollywoodclaw/squeeze-scanner/logs/launcher.err.log</string>
+  <string>/Users/hollywoodclaw/squeeze-scanner/logs/backup.err.log</string>
 </dict>
 </plist>

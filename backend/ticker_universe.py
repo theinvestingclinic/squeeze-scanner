@@ -16,17 +16,17 @@ def get_sp500_tickers() -> list[str]:
 # Dead/delisted tickers removed: BBBY, WISH, RIDE, AGTC, FFIE, GREE, HYZN, HLBZ, EEENF, GXII, HYLN, GOEV, ARVL
 SQUEEZE_WATCHLIST = [
     # Perennial squeeze candidates
-    "GME", "AMC", "CLOV", "WKHS", "RKT", "SPCE", "NKLA",
-    "CRIS", "SNDL", "EXPR", "KOSS", "BB", "NOK", "TLRY", "PXMD",
+    "GME", "AMC", "CLOV", "WKHS", "RKT", "SPCE",
+    "CRIS", "SNDL", "KOSS", "BB", "NOK", "TLRY", "PXMD",
     # Biotech / small cap with high short interest potential
     "NVAX", "SRPT", "MARA", "RIOT", "HUT", "BTBT", "ARBK", "CIFR", "CLSK",
     # Meme / options-heavy
     "SOFI", "LCID", "RIVN", "AFRM", "HOOD", "DKNG", "UWMC", "OPAD",
-    "PRPL", "BARK", "XELA", "BIOR", "ATER", "SDC", "BGFV", "ICAD",
-    "GFAI", "VERB", "CXAI", "ILUS", "GROM",
+    "PRPL", "BARK", "XELA", "ATER",
+    "GFAI", "CXAI", "ILUS", "GROM",
     # Mid cap / macro-sensitive
     "PLTR", "OPEN", "CHPT", "BLNK", "FCEL", "PLUG", "BE",
-    "NURO", "IDEX", "HPNN", "AIXI", "AITX",
+    "HPNN", "AIXI", "AITX",
 ]
 
 def get_discovered_tickers() -> list[str]:

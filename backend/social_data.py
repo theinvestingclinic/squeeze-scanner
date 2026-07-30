@@ -59,7 +59,7 @@ def _count_mentions(ticker: str) -> int:
     if not reddit:
         return 0
 
-    subreddits = ["wallstreetbets", "stocks", "options", "shortsqueeze", "Shortsqueeze"]
+    subreddits = ["wallstreetbets", "stocks", "options", "shortsqueeze"]
     cutoff = datetime.utcnow() - timedelta(hours=24)
     count = 0
     search_term = f"${ticker}"

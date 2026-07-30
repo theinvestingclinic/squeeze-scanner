@@ -68,7 +68,12 @@ def scan_ticker(ticker: str) -> dict | None:
 
         gamma = get_gamma_data(ticker)
         zones = get_volume_zones(ticker)
-        reddit_sat = get_reddit_saturation(ticker)
+        reddit_enabled = bool(
+            settings.enable_reddit_signal
+            and settings.reddit_client_id
+            and settings.reddit_client_secret
+        )
+        reddit_sat = get_reddit_saturation(ticker) if reddit_enabled else 0.0
 
         data = {
             "ticker": ticker,
@@ -81,7 +86,7 @@ def scan_ticker(ticker: str) -> dict | None:
             "net_gex": gamma.get("net_gex", 0),
             "volume_zones": zones,
             "reddit_saturation": reddit_sat,
-            "reddit_data_available": bool(settings.reddit_client_id),
+            "reddit_data_available": reddit_enabled,
             "eligibility_status": eligibility["status"],
             "eligibility": eligibility,
         }
@@ -137,7 +142,7 @@ def save_result(db: Session, data: dict, scan_run_id: int | None = None) -> Scan
 
 
 def should_send_alert(data: dict, alert_threshold: int) -> bool:
-    """Alert when a high-confidence or potential squeeze setup is reliable."""
+    """Return true only for reliable, calibrated setup/trigger alignment."""
     if data.get("score", 0) < alert_threshold and not is_potential_squeeze(data):
         return False
     if data.get("eligibility_status") != ELIGIBLE_COMMON_STOCK:
@@ -154,7 +159,11 @@ def should_send_alert(data: dict, alert_threshold: int) -> bool:
         return False
 
     quality = breakdown.get("_data_quality") or {}
-    return bool(quality.get("has_short_data", False))
+    if not quality.get("has_short_data", False):
+        return False
+    if settings.alert_require_calibration and not quality.get("signals_calibrated", False):
+        return False
+    return True
 
 
 def is_potential_squeeze(data: dict) -> bool:
@@ -165,6 +174,53 @@ def is_potential_squeeze(data: dict) -> bool:
         and data.get("trigger_score", 0) >= settings.alert_min_trigger_score
         and data.get("short_interest_pct", 0) >= settings.alert_min_short_interest_pct
         and data.get("relative_volume", 0) >= settings.alert_min_relative_volume
+    )
+
+
+def signal_tier(data: dict, alert_threshold: int | None = None) -> int:
+    """0=monitor, 1=setup watch, 2=active trigger."""
+    threshold = alert_threshold or settings.alert_threshold
+    if not should_send_alert(data, threshold):
+        return 0
+    return 2 if data.get("score", 0) >= threshold else 1
+
+
+def _row_as_signal(row: ScanResult) -> dict:
+    try:
+        breakdown = json.loads(row.score_breakdown or "{}")
+    except (TypeError, ValueError):
+        breakdown = {}
+    eligibility = breakdown.get("_eligibility") or {}
+    return {
+        "ticker": row.ticker,
+        "score": row.score or 0,
+        "setup_score": row.setup_score or 0,
+        "trigger_score": row.trigger_score or 0,
+        "short_interest_pct": row.short_interest_pct or 0,
+        "relative_volume": row.relative_volume or 0,
+        "eligibility_status": eligibility.get("status"),
+        "score_breakdown": breakdown,
+    }
+
+
+def is_material_transition(current: dict, previous: dict | None, alert_threshold: int) -> bool:
+    """Alert on a calibrated tier entry or a material improvement within a tier."""
+    if previous is None:
+        return False
+
+    current_tier = signal_tier(current, alert_threshold)
+    previous_tier = signal_tier(previous, alert_threshold)
+    if current_tier == 0:
+        return False
+    if current_tier > previous_tier:
+        return True
+    if current_tier != previous_tier:
+        return False
+    return (
+        current.get("score", 0) - previous.get("score", 0)
+        >= settings.alert_material_score_change
+        or current.get("trigger_score", 0) - previous.get("trigger_score", 0)
+        >= settings.alert_material_trigger_change
     )
 
 
@@ -179,7 +235,7 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
         return []
     _scan_running = True
 
-    from alerts import send_discord_alert
+    from alerts import send_discord_digest
 
     tickers = get_ticker_universe(include_sp500=False)
     log.info(f"Starting scan of {len(tickers)} tickers")
@@ -195,17 +251,20 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
         db.commit()
         db.refresh(run)
 
-        for ticker in tickers:
-            data = await loop.run_in_executor(_executor, scan_ticker, ticker)
-            if data is None:
-                continue
-            if data.get("price", 0) <= 0:
-                continue
-
-            save_result(db, data, scan_run_id=run.id)
-            results.append(data)
-
-            await asyncio.sleep(0.1)
+        # Run a bounded batch at a time.  The previous implementation created a
+        # four-worker pool but awaited each ticker serially.
+        worker_count = max(1, getattr(_executor, "_max_workers", 4))
+        for offset in range(0, len(tickers), worker_count):
+            batch = tickers[offset : offset + worker_count]
+            scanned = await asyncio.gather(
+                *(loop.run_in_executor(_executor, scan_ticker, ticker) for ticker in batch)
+            )
+            for data in scanned:
+                if data is None or data.get("price", 0) <= 0:
+                    continue
+                save_result(db, data, scan_run_id=run.id)
+                results.append(data)
+            await asyncio.sleep(0.15)
 
         results.sort(key=lambda x: x.get("score", 0), reverse=True)
 
@@ -214,18 +273,32 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
         run.ticker_count = len(results)
         db.commit()
 
-        # Prune scan runs older than 7 days to keep DB lean
-        cutoff = datetime.utcnow() - timedelta(days=7)
+        # Retain enough observations for the advertised 30-day calibration.
+        cutoff = datetime.utcnow() - timedelta(days=settings.scan_history_days)
         old_runs = db.query(ScanRun).filter(ScanRun.started_at < cutoff).all()
         for old_run in old_runs:
             db.query(ScanResult).filter(ScanResult.scan_run_id == old_run.id).delete()
             db.delete(old_run)
         db.commit()
 
-        # Fire Discord alerts — deduplicate: skip if alerted within 24h and score hasn't risen 10+
+        # Build one transition digest.  Stable candidates do not re-alert merely
+        # because 24 hours elapsed.
         alert_cutoff = datetime.utcnow() - timedelta(hours=24)
+        candidates = []
         for r in results:
             if not should_send_alert(r, alert_threshold):
+                continue
+            previous_row = (
+                db.query(ScanResult)
+                .filter(
+                    ScanResult.ticker == r["ticker"],
+                    ScanResult.scan_run_id != run.id,
+                )
+                .order_by(ScanResult.scanned_at.desc())
+                .first()
+            )
+            previous = _row_as_signal(previous_row) if previous_row else None
+            if not is_material_transition(r, previous, alert_threshold):
                 continue
             recent = (
                 db.query(Alert)
@@ -233,16 +306,30 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
                 .order_by(Alert.sent_at.desc())
                 .first()
             )
-            if recent and (r["score"] - recent.score) < 10:
+            if recent and (r["score"] - recent.score) < settings.alert_material_score_change:
                 continue
-            sent = await send_discord_alert(r)
-            if sent:
+            candidates.append(r)
+
+        candidates.sort(
+            key=lambda item: (signal_tier(item, alert_threshold), item.get("score", 0)),
+            reverse=True,
+        )
+        candidates = candidates[: settings.alert_digest_max_names]
+        if candidates and await send_discord_digest(candidates, alert_threshold):
+            for r in candidates:
                 db.add(Alert(
                     ticker=r["ticker"],
                     score=r["score"],
-                    message=f"Score {r['score']}/100 alert sent",
+                    price_at_alert=r.get("price"),
+                    message=(
+                        f"{'Active trigger' if signal_tier(r, alert_threshold) == 2 else 'Setup watch'} "
+                        f"transition at {r['score']}/100"
+                    ),
                 ))
-                db.commit()
+            db.commit()
+
+        from outcomes import update_alert_outcomes
+        update_alert_outcomes(db)
 
         log.info(f"Scan complete. {len(results)} tickers scored. Top score: {results[0]['score'] if results else 0}")
 

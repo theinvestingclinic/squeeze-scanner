@@ -6,11 +6,11 @@ Answers one question: **Where is market structure pressure building?**
 
 | Feature | How |
 |---|---|
-| Ticker scanner | Unusual call volume ratio across watchlist |
-| Gamma map | Call wall, put wall, zero-gamma level (Black-Scholes from yfinance) |
+| Ticker scanner | Call-volume/open-interest activity proxy across the watchlist |
+| Gamma map | Options-open-interest gamma proxy, call wall, put wall, and zero-gamma estimate |
 | Squeeze score | 0–100 model: short interest + float + gamma + options fuel + confirmation |
 | Volume zones | 30-day volume profile clusters (dark pool proxy until UW API added) |
-| Discord alerts | Fires when a stock reaches the potential-squeeze alert gate |
+| Discord alerts | One capped digest for calibrated, material state transitions |
 
 ## Quick start
 
@@ -22,13 +22,6 @@ uvicorn main:app --reload
 ```
 
 Open `http://localhost:8000` — the dashboard is served from the same process.
-
-## Or with Docker
-
-```bash
-cp backend/.env.example backend/.env   # fill in keys
-docker-compose up --build
-```
 
 ## Environment variables
 
@@ -46,12 +39,20 @@ docker-compose up --build
 | `ALERT_MIN_TRIGGER_SCORE` | No (default 20) | Minimum trigger score required for alerts |
 | `ALERT_MIN_SHORT_INTEREST_PCT` | No (default 20) | Minimum short interest required for potential-squeeze alerts |
 | `ALERT_MIN_RELATIVE_VOLUME` | No (default 2) | Minimum relative volume required for potential-squeeze alerts |
+| `ALERT_REQUIRE_CALIBRATION` | No (default true) | Blocks alerts until at least five prior observations exist |
+| `ALERT_DIGEST_MAX_NAMES` | No (default 5) | Maximum names in one transition digest |
+| `SCAN_HISTORY_DAYS` | No (default 35) | Local history retained for 30-day calibration |
+| `ENABLE_REDDIT_SIGNAL` | No (default false) | Enables the experimental Reddit penalty when credentials exist |
 | `SCAN_INTERVAL_MINUTES` | No (default 30) | How often to scan during market hours |
 | `ALLOWED_ORIGIN` | No | CORS origin for your domain |
 
 Scanner runs without Discord or Reddit configured — those features just silently skip.
 
-Alerts fire from the Short Squeeze Scanner itself after a scan result passes the alert gate. Hot-tier alerts fire at `ALERT_THRESHOLD`. Potential-squeeze alerts can fire below that when the score is at least `ALERT_POTENTIAL_THRESHOLD`, setup and trigger scores are both strong, short interest is elevated, relative volume is active, the ticker is an eligible common stock, current short-interest data exists, and no already-squeezed penalty is present. `DISCORD_WEBHOOK_URL` posts directly to its channel. If no webhook is set, `DISCORD_BOT_TOKEN` posts to `DISCORD_CHANNEL_ID`.
+Alerts fire only after calibration is ready and a candidate enters a higher
+signal tier or improves materially. Names from the same scan are grouped into
+one capped digest. Stable readings do not repeat merely because 24 hours have
+elapsed. `DISCORD_WEBHOOK_URL` posts directly to its channel. If no webhook is
+set, `DISCORD_BOT_TOKEN` posts to `DISCORD_CHANNEL_ID`.
 
 ## API endpoints
 
@@ -70,30 +71,23 @@ Alerts fire from the Short Squeeze Scanner itself after a scan result passes the
 | Short interest % float | 20 | Yahoo Finance (bi-weekly) |
 | Float size | 10 | Yahoo Finance |
 | Price trend | 10 | yfinance price history |
-| Call volume ratio | 15 | yfinance options |
-| Negative gamma | 12 | Calculated from options chain |
+| Call-volume/OI proxy | 15 | yfinance options |
+| Options-OI gamma proxy | 12 | Modelled from the options chain |
 | Call OI buildup | 10 | yfinance options |
-| IV expansion | 8 | yfinance options |
+| IV term-structure/history proxy | 8 | yfinance options plus accumulated local history |
 | Breaking key level | 8 | yfinance price history |
-| Relative volume | 7 | yfinance volume |
-| Reddit saturation | −15 | PRAW (Reddit API) |
+| Time-adjusted relative volume | 7 | yfinance volume |
+| Reddit saturation | −15 | Optional/experimental; disabled by default |
 
-## Upgrading to paid data
+## Data limitations
 
-When ready to add real dark pool data and real-time short interest:
-- Replace `short_data.py` with **Ortex API** (~$200/mo)
-- Replace `volume_profile.py` with **Unusual Whales API** (~$150/mo)
-- Add cost-to-borrow to scoring model (+18 pts available)
-
-## Deploying to your site
-
-The FastAPI backend serves the frontend at `/`. For theinvestingclinic.com:
-
-**Option A — subdomain**: Deploy to `scanner.theinvestingclinic.com` via Railway or Render (free tier available), link from your site.
-
-**Option B — embed**: Deploy backend, add `<iframe src="https://scanner.theinvestingclinic.com" />` to any page.
-
-**Option C — same server**: Set `ALLOWED_ORIGIN=https://theinvestingclinic.com` and call the API from your existing frontend.
+- Short interest normally updates twice monthly.
+- Call activity is compared with open interest until enough local observations
+  exist for a ticker-specific baseline.
+- Gamma and zero-gamma values are modelled proxies; they do not reveal actual
+  dealer books.
+- Volume zones are ordinary price-volume clusters, not dark-pool prints.
+- Results are research candidates, not recommendations.
 
 ## Running on an always-on Mac
 
@@ -108,3 +102,9 @@ On this desktop, the startup wrapper reads the scanner's Discord webhook from
 the macOS Keychain item
 `com.theinvestingclinic.squeeze-scanner.discord-webhook`. The webhook is never
 copied into this repository or a launch-agent plist.
+
+The service scans from 9:40 a.m. through 4:00 p.m. Eastern on open U.S. equity
+market days, respects common holidays/early closes, writes rotating application
+logs, and has a separate daily SQLite backup launch agent. Install both
+`deploy/macos/com.theinvestingclinic.squeeze-scanner.plist` and
+`deploy/macos/com.theinvestingclinic.squeeze-scanner-backup.plist`.

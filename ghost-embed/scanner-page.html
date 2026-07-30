@@ -429,31 +429,31 @@
 <div class="tic-scanner">
 
   <div class="tic-header">
-    <div class="tic-eyebrow">Live · Squeeze Scanner</div>
+    <div class="tic-eyebrow">30-minute research scanner</div>
     <h1>Where is market structure pressure building?</h1>
-    <p>Unusual options flow, gamma exposure, and short interest — scored and ranked in real time.</p>
+    <p>Delayed short interest plus options-derived setup and trigger proxies, refreshed during regular market hours.</p>
     <div class="tic-meta">
       <span><span class="tic-live-dot" id="tic-dot"></span><span id="tic-status">Loading…</span></span>
       <span id="tic-last-scan"></span>
-      <span>Short data refreshes bi-weekly · Scans every 30 min during market hours</span>
+      <span>Short data refreshes bi-weekly · Signals require local history before alerts activate</span>
     </div>
   </div>
 
   <div class="tic-stats">
     <div class="tic-stat">
-      <div class="tic-stat-label">Tickers scanned</div>
+      <div class="tic-stat-label">Eligible names</div>
       <div class="tic-stat-value" id="tic-total">—</div>
     </div>
     <div class="tic-stat">
-      <div class="tic-stat-label">High conviction (75+)</div>
+      <div class="tic-stat-label">Active triggers</div>
       <div class="tic-stat-value hot" id="tic-hot">—</div>
     </div>
     <div class="tic-stat">
-      <div class="tic-stat-label">Negative gamma</div>
+      <div class="tic-stat-label">Setup watches</div>
       <div class="tic-stat-value" id="tic-neg">—</div>
     </div>
     <div class="tic-stat">
-      <div class="tic-stat-label">Avg score</div>
+      <div class="tic-stat-label">Last completed</div>
       <div class="tic-stat-value" id="tic-avg">—</div>
     </div>
   </div>
@@ -461,10 +461,10 @@
   <div class="tic-controls">
     <input type="text" id="tic-search" placeholder="Search ticker…" style="width:150px" />
     <select id="tic-filter">
-      <option value="0" selected>All scores</option>
-      <option value="40">40+ only</option>
+      <option value="0">All scores</option>
+      <option value="40" selected>40+ setup watch</option>
       <option value="60">60+ only</option>
-      <option value="75">High conviction (75+)</option>
+      <option value="75">Active trigger (75+)</option>
     </select>
     <button class="tic-btn" id="tic-refresh">↻ Refresh</button>
   </div>
@@ -480,8 +480,8 @@
             <th>Trigger</th>
             <th>Price</th>
             <th>Short Int</th>
-            <th>Call Vol</th>
-            <th>Gamma</th>
+            <th>Call-vol/OI</th>
+            <th>Gamma proxy</th>
             <th>Call Wall</th>
             <th>Zero Gamma</th>
           </tr>
@@ -511,15 +511,11 @@
         <h3>Score Breakdown</h3>
         <div id="tic-breakdown"></div>
       </div>
-      <div class="tic-detail-col">
-        <h3>Discord Alert Preview</h3>
-        <pre class="tic-alert-preview" id="tic-alert"></pre>
-      </div>
     </div>
   </div>
 
   <div class="tic-disclaimer">
-    <strong>Not financial advice.</strong> The Clinic squeeze scanner surfaces structural signals as an educational research tool.  Scores are calculated from publicly available data.  SHORT INTEREST data is reported bi-weekly and may not reflect current positions.  Always conduct your own research before making investment decisions.
+    <strong>Not financial advice.</strong> This is an idea-generation tool, not a buy signal. Short interest is reported bi-weekly; gamma, IV, call-volume, and volume-zone fields are modelled proxies. Confirm source age and invalidation before acting.
   </div>
 
   <!-- Educational Section -->
@@ -537,7 +533,7 @@
         <div class="tic-edu-icon">🔥</div>
         <h3>The Squeeze Score</h3>
         <p>When a stock gets SQUEEZED, it's not magic.  It's math.  Short sellers borrowed shares and bet the price would fall.  When they're wrong, they have to BUY those shares back fast.  That forced buying is what sends a stock up 50%, 100%, sometimes more in a matter of days.</p>
-        <p>The Squeeze Score combines all the signals below into a single number from 0 to 100.  Above 60 means the ingredients are in place.  Above 75 means we're watching closely.  When we see a 75+ score with the stock breaking key levels on heavy VOLUME that's when Discord gets the alert.</p>
+        <p>The Squeeze Score combines the signals below into a 0–100 research rank. Above 60 indicates stronger alignment; 75+ is an active-trigger candidate. Discord is reserved for calibrated, material state changes rather than every high reading.</p>
         <p>The score is split into two parts you'll see in the table: a <strong>Setup Score</strong> and a <strong>Trigger Score</strong>.  Read on to understand what each one means.</p>
       </div>
 
@@ -581,16 +577,16 @@
       <div class="tic-edu-card">
         <div class="tic-edu-icon">📈</div>
         <h3>CALL VOLUME The Gasoline</h3>
-        <p>When you see CALL VOLUME running 3x, 5x, even 10x above normal someone is loading up on bets that the stock is going higher.  That's not random.  That's a signal.</p>
-        <p>But here's where it gets interesting.  The people selling those call options usually big market makers have to BUY the actual stock to hedge their position.  As the price rises, they have to buy MORE.  CALL VOLUME isn't just a sign of bullish sentiment.  It's fuel for a mechanical buying cycle that runs on its own.</p>
+        <p>This scanner estimates call activity relative to open interest; it does not have a true historical “normal call volume” series. Treat a high reading as an options-activity proxy that needs confirmation.</p>
+        <p>Options activity can affect hedging demand, but public open-interest data does not reveal each dealer's position or intent.</p>
       </div>
 
       <div class="tic-edu-card">
         <div class="tic-edu-icon">⚡</div>
         <h3>GAMMA The Accelerant</h3>
         <p>GAMMA sounds complicated.  It isn't.  It measures how much market makers have to buy or sell as the stock price moves not because they want to, but because they have to in order to stay hedged.</p>
-        <p>When a stock is in a "negative GAMMA" environment, market makers are forced to buy more stock as the price rises.  That mechanical buying amplifies every move up.  It's a feedback loop.  The price rises, they buy, the price rises more, they buy more.</p>
-        <p>If you see "Negative" in the Gamma column, the market structure is lined up to accelerate any move higher.</p>
+        <p>The displayed gamma field is an options-open-interest model. A negative reading can indicate amplification risk under the model, but it is not direct evidence of dealer positioning or forced buying.</p>
+        <p>Use it as context alongside price and time-adjusted volume confirmation.</p>
       </div>
 
       <div class="tic-edu-card">
@@ -603,16 +599,16 @@
       <div class="tic-edu-card">
         <div class="tic-edu-icon">🐋</div>
         <h3>VOLUME ZONES Where Big Money Played</h3>
-        <p>These zones show price levels where an unusually large amount of trading happened over the past 30 days.  Big institutions leave footprints.  High-volume zones often act as SUPPORT or RESISTANCE because the same players who traded there before tend to act at those levels again.</p>
+        <p>These zones show prices where a large share of reported volume traded over the past 30 days. They may help frame support or resistance, but they do not identify who traded.</p>
         <p>Watch for the stock to bounce off a volume zone, or break through one on conviction.  Both tell a story.  A break above a high-volume zone on big VOLUME is confirmation the move has real participation behind it.</p>
-        <p class="tic-edu-note">Note: volume zones are a proxy for dark pool activity.  Actual dark pool print data requires a paid data provider.  We'll upgrade this when the tool scales.</p>
+        <p class="tic-edu-note">These are ordinary price-volume clusters, not dark-pool or institutional prints.</p>
       </div>
 
       <div class="tic-edu-card">
         <div class="tic-edu-icon">📋</div>
         <h3>How To Use This Scanner</h3>
         <p>You're not trying to find a perfect score.  You're building context.</p>
-        <p>Start with the score anything above 60 is worth clicking.  Then open the detail panel and look at the gamma map.  Is the stock below the CALL WALL?  Below ZERO GAMMA?  That means the setup is loading but hasn't triggered yet.  Is it breaking above those levels on heavy VOLUME?  That's the entry we look for.</p>
+        <p>Start with the score, then inspect setup, trigger, calibration status, source age, and invalidation. A level break on time-adjusted volume is a condition to research, not an automatic entry.</p>
         <p>No score is a guarantee.  SHORT INTEREST data is published twice a month, so it's never perfectly current.  Use this as one tool alongside your own research not as a buy signal on its own.</p>
         <p>That's how we use it.  That's how you should too.</p>
       </div>
@@ -626,9 +622,12 @@
 (function() {
   const API = 'https://scanner-api.theinvestingclinic.com';
   let all = [];
+  let meta = {};
 
   load();
-  setInterval(load, 60000);
+  setInterval(() => {
+    if (document.visibilityState === 'visible') load();
+  }, 300000);
   document.getElementById('tic-refresh').addEventListener('click', refreshResults);
   document.getElementById('tic-close').addEventListener('click', closeDetail);
   document.getElementById('tic-search').addEventListener('input', render);
@@ -648,10 +647,11 @@
 
   async function load() {
     try {
-      const res = await fetch(API + '/api/scan?limit=100&min_score=0');
+      const res = await fetch(API + '/api/scan?limit=50&min_score=0');
       if (!res.ok) throw new Error();
       const data = await res.json();
       all = data.results || [];
+      meta = data;
 
       if (all.length) {
         setStatus('live');
@@ -689,14 +689,12 @@
   }
 
   function renderStats() {
-    const n   = all.length;
-    const hot = all.filter(r => r.score >= 75).length;
-    const neg = all.filter(r => r.is_negative_gamma).length;
-    const avg = n ? (all.reduce((s,r)=>s+r.score,0)/n).toFixed(1) : '—';
-    document.getElementById('tic-total').textContent = n;
-    document.getElementById('tic-hot').textContent   = hot;
-    document.getElementById('tic-neg').textContent   = neg;
-    document.getElementById('tic-avg').textContent   = avg;
+    document.getElementById('tic-total').textContent = meta.eligible_count ?? all.length;
+    document.getElementById('tic-hot').textContent   = meta.active_trigger_count ?? 0;
+    document.getElementById('tic-neg').textContent   = meta.setup_watch_count ?? 0;
+    document.getElementById('tic-avg').textContent   = meta.last_completed
+      ? new Date(meta.last_completed + 'Z').toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+      : '—';
   }
 
   function render() {
@@ -705,7 +703,7 @@
     const rows = all.filter(r => r.score >= min && (!q || r.ticker.includes(q)));
     const tbody = document.getElementById('tic-tbody');
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="10" class="tic-empty">No results match your filters.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="10" class="tic-empty">No active candidates meet this threshold. Quiet is a valid result.</td></tr>';
       return;
     }
     tbody.innerHTML = rows.map(r => `
@@ -733,14 +731,22 @@
     return `<span class="tic-score ${c}">${s}</span>`;
   }
 
-  function crowd(sat) {
+  function crowd(result) {
+    if (!result.reddit_data_available) return '<span style="color:#a8a09a">Unavailable</span>';
+    const sat = result.reddit_saturation || 0;
     if (sat >= 0.8) return '<span class="tic-crowd-hot">🔥 Crowded</span>';
     if (sat >= 0.4) return '<span class="tic-crowd-warm">⚠ Warm</span>';
     return '<span class="tic-crowd-ok">✓ Clear</span>';
   }
 
-  window.ticDetail = function(ticker) {
-    const d = all.find(r => r.ticker === ticker);
+  window.ticDetail = async function(ticker) {
+    let d = all.find(r => r.ticker === ticker);
+    try {
+      const response = await fetch(API + '/api/ticker/' + encodeURIComponent(ticker));
+      if (response.ok) d = await response.json();
+    } catch (_) {
+      // The compact row still supports a limited detail view if the request fails.
+    }
     if (!d) return;
     const setupLabel  = d.setup_score   != null ? ` · Setup ${d.setup_score}/47`   : '';
     const triggerLabel = d.trigger_score != null ? ` · Trigger ${d.trigger_score}/60` : '';
@@ -751,16 +757,16 @@
       ['Call wall',   d.call_wall  ? '$'+d.call_wall  : 'N/A'],
       ['Put wall',    d.put_wall   ? '$'+d.put_wall   : 'N/A'],
       ['Zero gamma',  d.zero_gamma ? '$'+d.zero_gamma : 'N/A'],
-      ['Environment', d.is_negative_gamma ? '⚡ Negative' : 'Positive'],
-      ['IV %ile',     d.iv_percentile ? d.iv_percentile+'%' : '—'],
-      ['FINRA short vol', d.finra_short_vol_ratio ? Math.round(d.finra_short_vol_ratio*100)+'% today' : '—'],
+      ['OI gamma proxy', d.is_negative_gamma ? 'Negative (amplification risk)' : 'Positive'],
+      ['IV proxy',     d.iv_percentile ? d.iv_percentile+'%' : '—'],
+      ['FINRA short-volume ratio', d.finra_short_vol_ratio ? Math.round(d.finra_short_vol_ratio*100)+'%' : '—'],
     ].map(([k,v]) =>
       `<div class="tic-kv"><span class="tic-kv-k">${k}</span><span class="tic-kv-v">${v}</span></div>`
     ).join('');
 
     const zones = d.volume_zones || [];
     document.getElementById('tic-zones').innerHTML = zones.length
-      ? '<p style="font-size:11px;color:#a8a09a;margin-bottom:10px">30-day volume accumulation zones</p>'
+      ? '<p style="font-size:11px;color:#a8a09a;margin-bottom:10px">30-day price-volume clusters; not dark-pool prints</p>'
         + zones.map(z =>
             `<div class="tic-zone"><span class="tic-zone-range">$${z.low} – $${z.high}</span><span class="tic-zone-pct">${z.volume_pct}% of vol</span></div>`
           ).join('')
@@ -783,9 +789,9 @@
           `<span style="font-size:11px;color:#d97706;display:block">${f}</span>`).join('') + '</div>'
       : '';
 
-    const _skip = new Set(['total','setup_score','trigger_score','_data_quality']);
+    const _skip = new Set(['total','setup_score','trigger_score','_data_quality','_eligibility']);
     document.getElementById('tic-breakdown').innerHTML = qHtml + Object.entries(bd)
-      .filter(([k]) => !_skip.has(k))
+      .filter(([k,pts]) => !_skip.has(k) && typeof pts === 'number')
       .map(([k,pts]) => {
         const pct = Math.min(Math.abs(pts)/(maxPts[k]||10)*100, 100);
         const neg = pts < 0;
@@ -795,24 +801,6 @@
           <span class="tic-bar-pts" style="color:${neg?'#dc2626':'#0a1a2a'}">${pts>0?'+':''}${pts}</span>
         </div>`;
       }).join('');
-
-    const trigger = d.price ? '$'+(d.price*1.03).toFixed(2) : 'N/A';
-    const risk    = d.price ? '$'+(d.price*0.95).toFixed(2) : 'N/A';
-    const zoneStr = zones.length ? '\nVolume zone: $'+zones[0].low+' – $'+zones[0].high : '';
-    document.getElementById('tic-alert').textContent =
-`🔥 Squeeze Radar Alert
-
-$${ticker} score: ${d.score}/100
-
-Short interest: ${d.short_interest_pct||'?'}% float
-Float: ${d.float_shares_m||'?'}M shares
-Call volume: ${d.call_volume_ratio||'?'}x normal
-Gamma: ${d.is_negative_gamma?'Negative (squeeze fuel)':'Positive'}
-Call wall: ${d.call_wall?'$'+d.call_wall:'N/A'}
-Zero gamma: ${d.zero_gamma?'$'+d.zero_gamma:'N/A'}${zoneStr}
-
-Trigger: break above ${trigger} with volume
-Risk: failed breakout under ${risk}`;
 
     const panel = document.getElementById('tic-detail');
     panel.style.display = 'block';

@@ -2,15 +2,17 @@ import json
 import logging
 import asyncio
 import hmac
+import os
+import re
 from contextlib import asynccontextmanager
 from datetime import datetime
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Header
+from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
@@ -20,16 +22,54 @@ from eligibility import ELIGIBLE_COMMON_STOCK
 from scheduler import start_scheduler, stop_scheduler
 from ticker_filters import EXCLUDED_ETF_TICKERS, is_excluded_ticker
 
+
+class SensitiveUrlFilter(logging.Filter):
+    """Prevent webhook credentials from ever being written by HTTP loggers."""
+
+    WEBHOOK = re.compile(
+        r"https://(?:discord(?:app)?\.com)/api(?:/v\d+)?/webhooks/"
+        r"[^/\s]+/[^?\s]+"
+    )
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        rendered = record.getMessage()
+        redacted = self.WEBHOOK.sub("https://discord.com/api/webhooks/[REDACTED]", rendered)
+        if redacted != rendered:
+            record.msg = redacted
+            record.args = ()
+        return True
+
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+root_logger = logging.getLogger()
+redaction_filter = SensitiveUrlFilter()
+for handler in root_logger.handlers:
+    handler.addFilter(redaction_filter)
+
+if os.environ.get("LOG_FILE"):
+    rotating_handler = RotatingFileHandler(
+        os.environ["LOG_FILE"],
+        maxBytes=5 * 1024 * 1024,
+        backupCount=5,
+    )
+    rotating_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    rotating_handler.addFilter(redaction_filter)
+    root_logger.addHandler(rotating_handler)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 log = logging.getLogger(__name__)
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 async def _startup_scan():
-    """Run a scan on startup if the database is empty."""
+    """Seed an empty database only during an open regular session."""
     import asyncio
     await asyncio.sleep(5)  # let the server finish starting
     try:
+        from market_calendar import is_scan_window
+        if not is_scan_window():
+            log.info("Database seed scan deferred until the next open market session")
+            return
         db = SessionLocal()
         count = db.query(ScanResult).count()
         db.close()
@@ -83,10 +123,29 @@ def require_admin(x_admin_token: str = Header(default="")):
 
 # ── Helper ──────────────────────────────────────────────────────────────────
 
-def _result_to_dict(r: ScanResult) -> dict:
+def _result_to_dict(r: ScanResult, include_detail: bool = True) -> dict:
     score_breakdown = json.loads(r.score_breakdown or "{}")
     eligibility = score_breakdown.get("_eligibility") or {}
-    return {
+    quality = score_breakdown.get("_data_quality") or {}
+    reliable_base = (
+        quality.get("signals_calibrated")
+        and quality.get("has_short_data")
+        and (r.setup_score or 0) >= settings.alert_min_setup_score
+        and (r.trigger_score or 0) >= settings.alert_min_trigger_score
+    )
+    potential_base = (
+        reliable_base
+        and (r.short_interest_pct or 0) >= settings.alert_min_short_interest_pct
+        and (r.relative_volume or 0) >= settings.alert_min_relative_volume
+    )
+    if reliable_base and r.score >= settings.alert_threshold:
+        signal_state = "active_trigger"
+    elif potential_base and r.score >= settings.alert_potential_threshold:
+        signal_state = "setup_watch"
+    else:
+        signal_state = "monitor"
+
+    payload = {
         "id": r.id,
         "ticker": r.ticker,
         "eligibility_status": eligibility.get("status", "legacy_unknown"),
@@ -108,13 +167,18 @@ def _result_to_dict(r: ScanResult) -> dict:
         "put_wall": r.put_wall,
         "zero_gamma": r.zero_gamma,
         "net_gex": r.net_gex,
-        "volume_zones": json.loads(r.volume_zones or "[]"),
         "reddit_saturation": r.reddit_saturation,
+        "reddit_data_available": bool(quality.get("has_reddit_data", False)),
         "price_change_30d": r.price_change_30d,
         "finra_short_vol_ratio": r.finra_short_vol_ratio,
-        "score_breakdown": score_breakdown,
+        "data_quality": quality,
+        "signal_state": signal_state,
         "scanned_at": r.scanned_at.isoformat() if r.scanned_at else None,
     }
+    if include_detail:
+        payload["volume_zones"] = json.loads(r.volume_zones or "[]")
+        payload["score_breakdown"] = score_breakdown
+    return payload
 
 
 def _result_is_current_eligible(r: ScanResult) -> bool:
@@ -137,6 +201,7 @@ def health():
 
 @app.get("/api/scan")
 def get_scan_results(
+    request: Request,
     limit: int = 50,
     min_score: float = 0,
     db: Session = Depends(get_db),
@@ -149,18 +214,43 @@ def get_scan_results(
         .first()
     )
     if not latest_run:
-        return {"results": [], "count": 0}
+        return JSONResponse(
+            {"results": [], "count": 0, "total_scanned": 0},
+            headers={"Cache-Control": "public, max-age=60"},
+        )
 
     candidate_rows = (
         db.query(ScanResult)
-        .filter(ScanResult.scan_run_id == latest_run.id, ScanResult.score >= min_score)
+        .filter(ScanResult.scan_run_id == latest_run.id)
         .filter(~ScanResult.ticker.in_(EXCLUDED_ETF_TICKERS))
         .order_by(desc(ScanResult.score))
         .all()
     )
     rows = [r for r in candidate_rows if _result_is_current_eligible(r)]
-    results = [_result_to_dict(r) for r in rows[:limit]]
-    return {"results": results, "count": len(rows)}
+    filtered = [r for r in rows if r.score >= min_score]
+    results = [_result_to_dict(r, include_detail=False) for r in filtered[: max(1, min(limit, 100))]]
+    etag = f'W/"scan-{latest_run.id}-{limit}-{min_score:g}"'
+    headers = {
+        "Cache-Control": "public, max-age=120, stale-while-revalidate=300",
+        "ETag": etag,
+    }
+    if request.headers.get("if-none-match") == etag:
+        return Response(status_code=304, headers=headers)
+
+    payload = {
+        "results": results,
+        "count": len(filtered),
+        "eligible_count": len(rows),
+        "total_scanned": latest_run.ticker_count or len(rows),
+        "active_trigger_count": sum(
+            1 for row in rows if _result_to_dict(row, include_detail=False)["signal_state"] == "active_trigger"
+        ),
+        "setup_watch_count": sum(
+            1 for row in rows if _result_to_dict(row, include_detail=False)["signal_state"] == "setup_watch"
+        ),
+        "last_completed": latest_run.completed_at.isoformat() if latest_run.completed_at else None,
+    }
+    return JSONResponse(payload, headers=headers)
 
 
 @app.get("/api/ticker/{symbol}")
@@ -280,7 +370,15 @@ def get_alerts(limit: int = 20, db: Session = Depends(get_db)):
     )
     return {
         "alerts": [
-            {"ticker": a.ticker, "score": a.score, "sent_at": a.sent_at.isoformat()}
+            {
+                "ticker": a.ticker,
+                "score": a.score,
+                "sent_at": a.sent_at.isoformat(),
+                "return_1d": a.return_1d,
+                "return_5d": a.return_5d,
+                "max_favorable_5d": a.max_favorable_5d,
+                "max_drawdown_5d": a.max_drawdown_5d,
+            }
             for a in alerts
         ]
     }

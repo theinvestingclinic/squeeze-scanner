@@ -33,7 +33,7 @@ def get_historical_stats(ticker: str) -> dict:
             db.query(ScanResult)
             .filter(ScanResult.ticker == ticker, ScanResult.scanned_at >= cutoff)
             .order_by(desc(ScanResult.scanned_at))
-            .limit(120)
+            .limit(500)
             .all()
         )
 

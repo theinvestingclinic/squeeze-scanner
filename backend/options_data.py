@@ -1,5 +1,26 @@
 import numpy as np
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from yf_cache import get_history, get_options_list, get_option_chain
+
+
+EASTERN = ZoneInfo("America/New_York")
+
+
+def _session_progress(last_bar_date) -> float:
+    """Estimated fraction of a regular session elapsed for today's daily bar."""
+    now = datetime.now(EASTERN)
+    try:
+        if last_bar_date.date() != now.date():
+            return 1.0
+    except AttributeError:
+        return 1.0
+    open_minutes = 9 * 60 + 30
+    now_minutes = now.hour * 60 + now.minute
+    elapsed = now_minutes - open_minutes
+    if elapsed <= 0:
+        return 0.1
+    return min(1.0, max(0.1, elapsed / 390))
 
 
 def get_options_metrics(ticker: str) -> dict:
@@ -29,9 +50,13 @@ def get_options_metrics(ticker: str) -> dict:
 
         avg_vol_20d = float(volumes.iloc[-21:-1].mean()) if len(volumes) > 21 else float(volumes.mean())
         today_vol = float(volumes.iloc[-1])
+        progress = _session_progress(hist.index[-1])
+        raw_relative_volume = today_vol / avg_vol_20d if avg_vol_20d > 0 else 0
         result["avg_volume_20d"] = round(avg_vol_20d, 0)
         result["dollar_volume_20d"] = round(avg_vol_20d * spot, 0)
-        result["relative_volume"] = round(today_vol / avg_vol_20d if avg_vol_20d > 0 else 0, 2)
+        result["relative_volume_raw"] = round(raw_relative_volume, 2)
+        result["session_progress"] = round(progress, 3)
+        result["relative_volume"] = round(raw_relative_volume / progress, 2)
 
         if len(closes) >= 22:
             price_30d_ago = float(closes.iloc[-22])

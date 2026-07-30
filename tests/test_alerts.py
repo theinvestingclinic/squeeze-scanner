@@ -10,7 +10,7 @@ sys.path.insert(0, str(BACKEND))
 
 import alerts
 from eligibility import ELIGIBLE_COMMON_STOCK
-from scanner import should_send_alert
+from scanner import is_material_transition, should_send_alert
 
 
 class DiscordDestinationTests(unittest.TestCase):
@@ -43,7 +43,11 @@ class AlertGateTests(unittest.TestCase):
             "relative_volume": 2.28,
             "eligibility_status": ELIGIBLE_COMMON_STOCK,
             "score_breakdown": {
-                "_data_quality": {"has_short_data": True},
+                "_data_quality": {
+                    "has_short_data": True,
+                    "signals_calibrated": True,
+                },
+                "_eligibility": {"status": ELIGIBLE_COMMON_STOCK},
             },
         }
 
@@ -64,6 +68,27 @@ class AlertGateTests(unittest.TestCase):
         low_volume["relative_volume"] = 1.9
 
         self.assertFalse(should_send_alert(low_volume, 75))
+
+    def test_uncalibrated_result_never_alerts(self):
+        uncalibrated = self.wen_style_result()
+        uncalibrated["score_breakdown"]["_data_quality"]["signals_calibrated"] = False
+
+        self.assertFalse(should_send_alert(uncalibrated, 75))
+
+    def test_stable_candidate_does_not_repeat(self):
+        previous = self.wen_style_result()
+        current = self.wen_style_result()
+        current["score"] = previous["score"] + 1
+
+        self.assertFalse(is_material_transition(current, previous, 75))
+
+    def test_tier_entry_is_material(self):
+        previous = self.wen_style_result()
+        previous["score"] = 45
+        previous["relative_volume"] = 1
+        current = self.wen_style_result()
+
+        self.assertTrue(is_material_transition(current, previous, 75))
 
 
 if __name__ == "__main__":

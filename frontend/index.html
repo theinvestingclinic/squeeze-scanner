@@ -33,15 +33,15 @@
       <header class="page-header">
         <div>
           <h1>Where is market structure pressure building?</h1>
-          <p class="subtitle">Scanning for short squeeze setups — unusual options flow, gamma exposure, short interest</p>
+          <p class="subtitle">Researching structural squeeze candidates with delayed short-interest data and options-derived proxies</p>
         </div>
         <div class="header-controls">
           <input id="search-input" type="text" placeholder="Search ticker…" />
           <select id="min-score-filter">
             <option value="0">All scores</option>
-            <option value="40">40+ only</option>
-            <option value="60" selected>60+ only</option>
-            <option value="75">75+ (high conviction)</option>
+            <option value="40" selected>40+ setup watch</option>
+            <option value="60">60+ strong alignment</option>
+            <option value="75">75+ active trigger</option>
           </select>
         </div>
       </header>
@@ -49,19 +49,19 @@
       <!-- Stats bar -->
       <div class="stats-bar">
         <div class="stat-card">
-          <span class="stat-label">Tickers scanned</span>
+          <span class="stat-label">Eligible names</span>
           <span class="stat-value" id="stat-total">—</span>
         </div>
         <div class="stat-card">
-          <span class="stat-label">High conviction (75+)</span>
+          <span class="stat-label">Active triggers</span>
           <span class="stat-value hot" id="stat-high">—</span>
         </div>
         <div class="stat-card">
-          <span class="stat-label">Negative gamma</span>
+          <span class="stat-label">Setup watches</span>
           <span class="stat-value" id="stat-neg-gamma">—</span>
         </div>
         <div class="stat-card">
-          <span class="stat-label">Avg score</span>
+          <span class="stat-label">Last completed</span>
           <span class="stat-value" id="stat-avg">—</span>
         </div>
       </div>
@@ -81,11 +81,11 @@
                 <th>Price</th>
                 <th>Short Int %</th>
                 <th>Float (M)</th>
-                <th>Call Vol Ratio</th>
-                <th>Gamma</th>
-                <th>IV %ile</th>
-                <th>Rel Vol</th>
-                <th>Reddit</th>
+                <th>Call-vol/OI</th>
+                <th>Gamma proxy</th>
+                <th>IV proxy</th>
+                <th>Time-adj rel vol</th>
+                <th>Social data</th>
                 <th>Details</th>
               </tr>
             </thead>
@@ -114,10 +114,6 @@
           <div class="detail-col">
             <h3>Score Breakdown</h3>
             <div id="breakdown-data"></div>
-          </div>
-          <div class="detail-col">
-            <h3>Alert Preview</h3>
-            <pre id="alert-preview" class="alert-box"></pre>
           </div>
         </div>
       </section>

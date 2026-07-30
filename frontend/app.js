@@ -4,12 +4,15 @@ const API = window.location.hostname === 'localhost' || window.location.hostname
 
 let allResults = [];
 let currentTicker = null;
+let latestMeta = {};
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
 document.addEventListener('DOMContentLoaded', () => {
   loadResults();
-  setInterval(loadResults, 60_000); // refresh every 60s
+  setInterval(() => {
+    if (document.visibilityState === 'visible') loadResults();
+  }, 300_000);
 
   document.getElementById('run-scan-btn').addEventListener('click', refreshResults);
   document.getElementById('close-detail').addEventListener('click', closeDetail);
@@ -21,10 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadResults() {
   try {
-    const res = await fetch(`${API}/api/scan?limit=100&min_score=0`);
+    const res = await fetch(`${API}/api/scan?limit=50&min_score=0`);
     if (!res.ok) throw new Error(res.statusText);
     const data = await res.json();
     allResults = data.results || [];
+    latestMeta = data;
     renderStats();
     renderTable();
     updateLastScanTime();
@@ -58,17 +62,12 @@ async function loadTickerDetail(ticker) {
 // ── Rendering ─────────────────────────────────────────────────────────────────
 
 function renderStats() {
-  const total = allResults.length;
-  const highConviction = allResults.filter(r => r.score >= 75).length;
-  const negGamma = allResults.filter(r => r.is_negative_gamma).length;
-  const avg = total > 0
-    ? (allResults.reduce((s, r) => s + r.score, 0) / total).toFixed(1)
+  document.getElementById('stat-total').textContent = latestMeta.eligible_count ?? allResults.length;
+  document.getElementById('stat-high').textContent = latestMeta.active_trigger_count ?? 0;
+  document.getElementById('stat-neg-gamma').textContent = latestMeta.setup_watch_count ?? 0;
+  document.getElementById('stat-avg').textContent = latestMeta.last_completed
+    ? new Date(latestMeta.last_completed + 'Z').toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
     : '—';
-
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-high').textContent = highConviction;
-  document.getElementById('stat-neg-gamma').textContent = negGamma;
-  document.getElementById('stat-avg').textContent = avg;
 }
 
 function renderTable() {
@@ -85,7 +84,7 @@ function renderTable() {
 
   const tbody = document.getElementById('scanner-body');
   if (filtered.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="11" class="empty-state">No results match your filters.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="11" class="empty-state">No active candidates meet this threshold. Quiet is a valid result.</td></tr>`;
     return;
   }
 
@@ -103,7 +102,7 @@ function renderTable() {
       }</td>
       <td>${r.iv_percentile > 0 ? r.iv_percentile + '%' : '—'}</td>
       <td>${r.relative_volume > 0 ? r.relative_volume + 'x' : '—'}</td>
-      <td>${redditBadge(r.reddit_saturation)}</td>
+      <td>${redditBadge(r)}</td>
       <td><button class="btn-sm">Details →</button></td>
     </tr>
   `).join('');
@@ -117,7 +116,9 @@ function scorePill(score) {
   return `<span class="score-pill ${cls}">${score}</span>`;
 }
 
-function redditBadge(sat) {
+function redditBadge(result) {
+  if (!result.reddit_data_available) return `<span class="muted">Unavailable</span>`;
+  const sat = result.reddit_saturation || 0;
   if (sat >= 0.8) return `<span class="reddit-hot">🔥 Crowded</span>`;
   if (sat >= 0.4) return `<span class="reddit-warm">⚠ Warm</span>`;
   return `<span class="reddit-safe">✓ Clear</span>`;
@@ -130,7 +131,9 @@ async function openDetail(ticker) {
   const data = await loadTickerDetail(ticker);
   if (!data) return;
 
-  document.getElementById('detail-title').textContent = `$${ticker} — Score ${data.score}/100`;
+  const state = data.signal_state === 'active_trigger' ? 'Active trigger'
+    : data.signal_state === 'setup_watch' ? 'Setup watch' : 'Monitor';
+  document.getElementById('detail-title').textContent = `$${ticker} — ${state} · ${data.score}/100`;
 
   // Gamma map
   const gamma = document.getElementById('gamma-data');
@@ -139,8 +142,8 @@ async function openDetail(ticker) {
     ['Call wall', data.call_wall ? `$${data.call_wall}` : 'N/A'],
     ['Put wall', data.put_wall ? `$${data.put_wall}` : 'N/A'],
     ['Zero gamma', data.zero_gamma ? `$${data.zero_gamma}` : 'N/A'],
-    ['Net GEX', data.net_gex ? formatGex(data.net_gex) : 'N/A'],
-    ['Gamma env.', data.is_negative_gamma ? '⚡ Negative (squeeze fuel)' : 'Positive (stabilising)'],
+    ['Net GEX proxy', data.net_gex ? formatGex(data.net_gex) : 'N/A'],
+    ['Options-OI gamma proxy', data.is_negative_gamma ? 'Negative (amplification risk)' : 'Positive'],
   ].map(([k, v]) => `<div class="kv-row"><span class="kv-label">${k}</span><span class="kv-value">${v}</span></div>`).join('');
 
   // Volume zones
@@ -153,7 +156,7 @@ async function openDetail(ticker) {
         <span class="zone-pct">${z.volume_pct}% of 30d vol</span>
       </div>
     `).join('');
-    zones.insertAdjacentHTML('afterbegin', '<p style="font-size:11px;color:var(--muted);margin-bottom:8px">High-volume accumulation zones (30-day volume profile). Upgrade to Unusual Whales API for actual dark pool prints.</p>');
+    zones.insertAdjacentHTML('afterbegin', '<p style="font-size:11px;color:var(--muted);margin-bottom:8px">Price-volume clusters from the last 30 days. These are not institutional or dark-pool prints.</p>');
   } else {
     zones.innerHTML = `<p class="muted" style="font-size:12px;color:var(--muted)">No significant zones detected.</p>`;
   }
@@ -174,8 +177,9 @@ async function openDetail(ticker) {
     reddit_danger: 'Reddit danger', already_squeezed: 'Already squeezed',
   };
 
+  const skipped = new Set(['total', 'setup_score', 'trigger_score', '_data_quality', '_eligibility']);
   bd.innerHTML = Object.entries(breakdown)
-    .filter(([k]) => k !== 'total')
+    .filter(([k, v]) => !skipped.has(k) && typeof v === 'number')
     .map(([key, pts]) => {
       const max = maxPts[key] || 10;
       const pct = Math.min(Math.abs(pts) / max * 100, 100);
@@ -191,9 +195,6 @@ async function openDetail(ticker) {
       `;
     }).join('');
 
-  // Alert preview
-  document.getElementById('alert-preview').textContent = buildAlertPreview(data);
-
   const panel = document.getElementById('detail-panel');
   panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -202,31 +203,6 @@ async function openDetail(ticker) {
 function closeDetail() {
   document.getElementById('detail-panel').style.display = 'none';
   currentTicker = null;
-}
-
-function buildAlertPreview(d) {
-  const trigger = d.price ? `$${(d.price * 1.03).toFixed(2)}` : 'N/A';
-  const risk = d.price ? `$${(d.price * 0.95).toFixed(2)}` : 'N/A';
-  const gammaLine = d.is_negative_gamma ? 'Negative above price (squeeze fuel)' : 'Positive';
-  const zones = d.volume_zones || [];
-  const zoneText = zones.length > 0
-    ? `\nVolume zone: $${zones[0].low} – $${zones[0].high}`
-    : '';
-
-  return `🔥 Squeeze Radar Alert
-
-$${d.ticker} score: ${d.score}/100
-
-Short interest: ${d.short_interest_pct || '?'}% float
-Float: ${d.float_shares_m || '?'}M shares
-Call volume: ${d.call_volume_ratio || '?'}x normal
-Gamma: ${gammaLine}
-Call wall: ${d.call_wall ? '$' + d.call_wall : 'N/A'}
-Put wall: ${d.put_wall ? '$' + d.put_wall : 'N/A'}
-Zero gamma: ${d.zero_gamma ? '$' + d.zero_gamma : 'N/A'}${zoneText}
-
-Trigger: break above ${trigger} with volume
-Risk: failed breakout under ${risk}`;
 }
 
 // ── Utilities ──────────────────────────────────────────────────────────────────

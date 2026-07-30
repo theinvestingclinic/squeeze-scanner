@@ -5,13 +5,15 @@ SCRIPT_DIR="${0:A:h}"
 REPO_DIR="${SCRIPT_DIR:h}"
 BACKEND_DIR="${REPO_DIR}/backend"
 DATA_DIR="${REPO_DIR}/data"
+LOG_DIR="${REPO_DIR}/logs"
 WEBHOOK_KEYCHAIN_SERVICE="com.theinvestingclinic.squeeze-scanner.discord-webhook"
 
-mkdir -p "${DATA_DIR}"
+mkdir -p "${DATA_DIR}" "${LOG_DIR}"
 
 export DATABASE_URL="sqlite:///${DATA_DIR}/scanner.db"
 export ALLOWED_ORIGIN="${ALLOWED_ORIGIN:-https://theinvestingclinic.com}"
 export PYTHONUNBUFFERED=1
+export LOG_FILE="${LOG_DIR}/scanner.log"
 
 # Read the Railway webhook from macOS Keychain without copying it into this repo.
 if [[ -z "${DISCORD_WEBHOOK_URL:-}" ]]; then
@@ -28,4 +30,4 @@ if [[ -z "${DISCORD_WEBHOOK_URL:-}" ]]; then
 fi
 
 cd "${BACKEND_DIR}"
-exec "${REPO_DIR}/.venv/bin/uvicorn" main:app --host 127.0.0.1 --port 8000
+exec "${REPO_DIR}/.venv/bin/uvicorn" main:app --host 127.0.0.1 --port 8000 --no-access-log

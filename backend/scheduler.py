@@ -3,12 +3,16 @@ import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from config import settings
+from market_calendar import is_scan_window
 
 log = logging.getLogger(__name__)
 scheduler = AsyncIOScheduler(timezone="America/New_York")
 
 
 async def _scheduled_scan():
+    if not is_scan_window():
+        log.info("Skipping scheduled scan: U.S. equity market is closed")
+        return
     log.info("Running scheduled scan")
     from scanner import run_full_scan
     await run_full_scan(alert_threshold=settings.alert_threshold)
@@ -28,18 +32,26 @@ async def _scheduled_discovery():
 
 
 def start_scheduler():
-    interval = settings.scan_interval_minutes
-
-    # Scan every N minutes, Mon-Fri, 9 AM–5 PM ET
-    # Starts at 9 AM to ensure FINRA discovery (8:30 AM) has finished loading
+    # First scan begins after the opening auction.  Subsequent jobs remain on a
+    # 30-minute cadence and the runtime calendar skips holidays/early closes.
     scheduler.add_job(
         _scheduled_scan,
-        trigger=CronTrigger(
-            day_of_week="mon-fri",
-            hour="9-17",
-            minute=f"*/{interval}",
-        ),
-        id="full_scan",
+        trigger=CronTrigger(day_of_week="mon-fri", hour=9, minute=40),
+        id="opening_scan",
+        replace_existing=True,
+        misfire_grace_time=120,
+    )
+    scheduler.add_job(
+        _scheduled_scan,
+        trigger=CronTrigger(day_of_week="mon-fri", hour="10-15", minute="10,40"),
+        id="intraday_scan",
+        replace_existing=True,
+        misfire_grace_time=120,
+    )
+    scheduler.add_job(
+        _scheduled_scan,
+        trigger=CronTrigger(day_of_week="mon-fri", hour=16, minute=0),
+        id="closing_scan",
         replace_existing=True,
         misfire_grace_time=120,
     )
@@ -54,7 +66,10 @@ def start_scheduler():
     )
 
     scheduler.start()
-    log.info(f"Scheduler started — scan every {interval} min Mon-Fri 8 AM-5 PM ET, discovery at 8:30 AM ET")
+    log.info(
+        "Scheduler started — scans 9:40 AM-4:00 PM ET on open market days; "
+        "discovery at 8:30 AM ET"
+    )
 
 
 def stop_scheduler():

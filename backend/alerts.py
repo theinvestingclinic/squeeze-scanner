@@ -78,7 +78,7 @@ def format_alert(data: dict) -> str:
     elif reddit_sat >= 0.6:
         danger_label = "\n⚠️ **Caution:** Elevated social media mentions"
 
-    gamma_line = "Negative (squeeze fuel ✅)" if is_neg_gamma else "Positive (stabilising)"
+    gamma_line = "Negative OI proxy (amplification risk)" if is_neg_gamma else "Positive OI proxy"
 
     zone_text = ""
     if zones:
@@ -91,14 +91,14 @@ def format_alert(data: dict) -> str:
 
     trigger_text, risk_text = _trade_levels(price, call_wall, put_wall, zero_gamma, zones)
 
-    message = f"""🔥 **Squeeze Radar Alert**
+    message = f"""**Squeeze signal alignment**
 
 **${ticker}** — Score: **{score}/100**
 
 📊 **Short interest:** {si}% of float
 📉 **Float:** {float_m}M shares
-📈 **Call volume:** {cvr}x normal
-⚡ **Gamma:** {gamma_line}
+📈 **Call-volume/OI proxy:** {cvr}x
+⚡ **Options-OI gamma proxy:** {gamma_line}
 🎯 **Call wall:** {call_wall_text}
 🛡️ **Put wall:** {put_wall_text}
 🔀 **Zero gamma:** {zero_gamma_text}{zone_text}
@@ -107,17 +107,42 @@ def format_alert(data: dict) -> str:
 🚀 **Trigger:** {trigger_text}
 ❌ **Risk:** {risk_text}{danger_label}
 
-*Short data refreshes bi-weekly. Verify before trading.*"""
+*Research candidate, not a trade recommendation. Short interest refreshes bi-weekly and options/gamma fields are modelled proxies.*"""
 
     return message
 
 
-async def send_discord_alert(data: dict) -> bool:
+def format_digest(items: list[dict], alert_threshold: int) -> str:
+    lines = [
+        "**Squeeze Scanner — material state changes**",
+        "*Calibrated candidates only; research signals, not trade recommendations.*",
+        "",
+    ]
+    for data in items:
+        state = "Active trigger" if data.get("score", 0) >= alert_threshold else "Setup watch"
+        lines.append(
+            f"**${data.get('ticker', '???')} — {state}** · "
+            f"{data.get('score', 0)}/100 · "
+            f"setup {data.get('setup_score', 0)} · trigger {data.get('trigger_score', 0)}"
+        )
+        lines.append(
+            f"SI {data.get('short_interest_pct', 0)}% · "
+            f"time-adjusted rel vol {data.get('relative_volume', 0)}x · "
+            f"call-vol/OI proxy {data.get('call_volume_ratio', 0)}x"
+        )
+    lines.extend(
+        [
+            "",
+            "*Short interest is bi-weekly. Options-OI gamma and volume-zone fields are proxies. Verify source freshness before acting.*",
+        ]
+    )
+    return "\n".join(lines)[:1900]
+
+
+async def _send_message(message: str) -> bool:
     url, headers = discord_destination()
     if not url:
         return False
-
-    message = format_alert(data)
 
     try:
         async with httpx.AsyncClient() as client:
@@ -134,6 +159,17 @@ async def send_discord_alert(data: dict) -> bool:
     except Exception as exc:
         log.warning("Discord squeeze alert failed: %s", exc)
         return False
+
+
+async def send_discord_alert(data: dict) -> bool:
+    """Compatibility wrapper for manual single-name sends."""
+    return await _send_message(format_alert(data))
+
+
+async def send_discord_digest(items: list[dict], alert_threshold: int) -> bool:
+    if not items:
+        return False
+    return await _send_message(format_digest(items, alert_threshold))
 
 
 def discord_destination() -> tuple[str, dict[str, str]]:
