@@ -1,4 +1,16 @@
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text, Boolean, text
+from sqlalchemy import (
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    create_engine,
+    text,
+)
 from sqlalchemy.orm import declarative_base, sessionmaker
 from datetime import datetime
 from config import settings
@@ -81,6 +93,59 @@ class Alert(Base):
     max_favorable_5d = Column(Float, nullable=True)
     max_drawdown_5d = Column(Float, nullable=True)
     evaluated_at = Column(DateTime, nullable=True)
+
+
+class SignalEvent(Base):
+    """A material scanner transition, recorded independently of delivery."""
+
+    __tablename__ = "signal_events"
+    __table_args__ = (UniqueConstraint("event_key", name="uq_signal_events_event_key"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    event_key = Column(String, nullable=False, index=True)
+    scan_run_id = Column(Integer, nullable=True, index=True)
+    ticker = Column(String, nullable=False, index=True)
+    tier = Column(Integer, nullable=False)
+    event_type = Column(String, nullable=False)
+    score = Column(Float, nullable=False)
+    setup_score = Column(Float, nullable=True)
+    trigger_score = Column(Float, nullable=True)
+    price_at_signal = Column(Float, nullable=True)
+    payload = Column(Text, nullable=False)
+    detected_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    return_1d = Column(Float, nullable=True)
+    return_5d = Column(Float, nullable=True)
+    max_favorable_5d = Column(Float, nullable=True)
+    max_drawdown_5d = Column(Float, nullable=True)
+    evaluated_at = Column(DateTime, nullable=True)
+
+
+class AlertOutbox(Base):
+    """Durable Discord delivery state for one material signal event."""
+
+    __tablename__ = "alert_outbox"
+    __table_args__ = (
+        UniqueConstraint("signal_event_id", name="uq_alert_outbox_signal_event_id"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    signal_event_id = Column(
+        Integer,
+        ForeignKey("signal_events.id"),
+        nullable=False,
+        index=True,
+    )
+    # pending -> sent, or pending -> failed -> sent. A newer unsent event for
+    # the same ticker can supersede an older row without deleting its signal.
+    status = Column(String, default="pending", nullable=False, index=True)
+    attempt_count = Column(Integer, default=0, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
+    last_attempt_at = Column(DateTime, nullable=True)
+    last_failure_at = Column(DateTime, nullable=True)
+    next_attempt_at = Column(DateTime, nullable=True, index=True)
+    sent_at = Column(DateTime, nullable=True)
+    last_error_code = Column(String, nullable=True)
+    alert_id = Column(Integer, ForeignKey("alerts.id"), nullable=True)
 
 
 class DiscoveredTicker(Base):

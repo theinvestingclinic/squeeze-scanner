@@ -137,8 +137,15 @@ async function openDetail(ticker) {
 
   // Gamma map
   const gamma = document.getElementById('gamma-data');
+  const quality = data.data_quality || {};
+  const calibrationSessions = quality.history_sessions || 0;
+  const calibrationMinimum = quality.calibration_min_sessions || 5;
+  const calibrationStatus = quality.signals_calibrated
+    ? `Ready — ${calibrationSessions} distinct prior sessions`
+    : `Building — ${calibrationSessions}/${calibrationMinimum} distinct prior sessions`;
   gamma.innerHTML = [
     ['Current price', `$${fmt(data.price)}`],
+    ['Signal calibration', calibrationStatus],
     ['Call wall', data.call_wall ? `$${data.call_wall}` : 'N/A'],
     ['Put wall', data.put_wall ? `$${data.put_wall}` : 'N/A'],
     ['Zero gamma', data.zero_gamma ? `$${data.zero_gamma}` : 'N/A'],

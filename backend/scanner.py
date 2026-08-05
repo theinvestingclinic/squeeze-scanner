@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 import numpy as np
 
 from config import settings
-from database import ScanResult, ScanRun, Alert, SessionLocal
+from database import ScanResult, ScanRun, SessionLocal
 from eligibility import ELIGIBLE_COMMON_STOCK, evaluate_eligibility
 from options_data import get_options_metrics
 from short_data import get_short_data
@@ -205,23 +205,37 @@ def _row_as_signal(row: ScanResult) -> dict:
 
 def is_material_transition(current: dict, previous: dict | None, alert_threshold: int) -> bool:
     """Alert on a calibrated tier entry or a material improvement within a tier."""
+    return material_transition_type(current, previous, alert_threshold) is not None
+
+
+def material_transition_type(
+    current: dict,
+    previous: dict | None,
+    alert_threshold: int,
+) -> str | None:
+    """Classify a material transition for durable signal/outbox records."""
     if previous is None:
-        return False
+        return None
 
     current_tier = signal_tier(current, alert_threshold)
     previous_tier = signal_tier(previous, alert_threshold)
     if current_tier == 0:
-        return False
+        return None
     if current_tier > previous_tier:
-        return True
+        return "tier_upgrade"
     if current_tier != previous_tier:
-        return False
-    return (
+        return None
+    if (
         current.get("score", 0) - previous.get("score", 0)
         >= settings.alert_material_score_change
-        or current.get("trigger_score", 0) - previous.get("trigger_score", 0)
+    ):
+        return "score_improvement"
+    if (
+        current.get("trigger_score", 0) - previous.get("trigger_score", 0)
         >= settings.alert_material_trigger_change
-    )
+    ):
+        return "trigger_improvement"
+    return None
 
 
 async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
@@ -235,7 +249,11 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
         return []
     _scan_running = True
 
-    from alerts import send_discord_digest
+    from alert_delivery import (
+        deliver_pending_alerts,
+        enqueue_signal_event,
+        is_recent_signal_duplicate,
+    )
 
     tickers = get_ticker_universe(include_sp500=False)
     log.info(f"Starting scan of {len(tickers)} tickers")
@@ -281,10 +299,9 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
             db.delete(old_run)
         db.commit()
 
-        # Build one transition digest.  Stable candidates do not re-alert merely
-        # because 24 hours elapsed.
-        alert_cutoff = datetime.utcnow() - timedelta(hours=24)
-        candidates = []
+        # Record every material transition before attempting Discord. Delivery
+        # is a durable, capped outbox; missing credentials, network failures,
+        # and names beyond one digest remain queued for a later scan.
         for r in results:
             if not should_send_alert(r, alert_threshold):
                 continue
@@ -298,35 +315,29 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
                 .first()
             )
             previous = _row_as_signal(previous_row) if previous_row else None
-            if not is_material_transition(r, previous, alert_threshold):
+            event_type = material_transition_type(r, previous, alert_threshold)
+            if event_type is None:
                 continue
-            recent = (
-                db.query(Alert)
-                .filter(Alert.ticker == r["ticker"], Alert.sent_at >= alert_cutoff)
-                .order_by(Alert.sent_at.desc())
-                .first()
+            tier = signal_tier(r, alert_threshold)
+            if is_recent_signal_duplicate(db, r, tier=tier):
+                continue
+            enqueue_signal_event(
+                db,
+                r,
+                scan_run_id=run.id,
+                tier=tier,
+                event_type=event_type,
             )
-            if recent and (r["score"] - recent.score) < settings.alert_material_score_change:
-                continue
-            candidates.append(r)
+        db.commit()
 
-        candidates.sort(
-            key=lambda item: (signal_tier(item, alert_threshold), item.get("score", 0)),
-            reverse=True,
-        )
-        candidates = candidates[: settings.alert_digest_max_names]
-        if candidates and await send_discord_digest(candidates, alert_threshold):
-            for r in candidates:
-                db.add(Alert(
-                    ticker=r["ticker"],
-                    score=r["score"],
-                    price_at_alert=r.get("price"),
-                    message=(
-                        f"{'Active trigger' if signal_tier(r, alert_threshold) == 2 else 'Setup watch'} "
-                        f"transition at {r['score']}/100"
-                    ),
-                ))
-            db.commit()
+        try:
+            await deliver_pending_alerts(db, alert_threshold)
+        except Exception as exc:
+            # Signal/outbox rows are already committed. A later scan can retry.
+            log.warning(
+                "Discord outbox processing deferred after %s",
+                type(exc).__name__,
+            )
 
         from outcomes import update_alert_outcomes
         update_alert_outcomes(db)

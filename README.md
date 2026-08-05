@@ -39,8 +39,11 @@ Open `http://localhost:8000` — the dashboard is served from the same process.
 | `ALERT_MIN_TRIGGER_SCORE` | No (default 20) | Minimum trigger score required for alerts |
 | `ALERT_MIN_SHORT_INTEREST_PCT` | No (default 20) | Minimum short interest required for potential-squeeze alerts |
 | `ALERT_MIN_RELATIVE_VOLUME` | No (default 2) | Minimum relative volume required for potential-squeeze alerts |
-| `ALERT_REQUIRE_CALIBRATION` | No (default true) | Blocks alerts until at least five prior observations exist |
+| `ALERT_REQUIRE_CALIBRATION` | No (default true) | Blocks alerts until enough distinct prior trading sessions exist |
 | `ALERT_DIGEST_MAX_NAMES` | No (default 5) | Maximum names in one transition digest |
+| `CALIBRATION_MIN_SESSIONS` | No (default 5) | Distinct completed trading sessions required for signal calibration |
+| `DISCORD_MAX_ATTEMPTS` | No (default 3) | Bounded attempts for rate limits, server errors, and network failures |
+| `ALERT_OUTBOX_RETRY_MINUTES` | No (default 15) | Minimum delay before a failed digest is retried by a later scan |
 | `SCAN_HISTORY_DAYS` | No (default 35) | Local history retained for 30-day calibration |
 | `ENABLE_REDDIT_SIGNAL` | No (default false) | Enables the experimental Reddit penalty when credentials exist |
 | `SCAN_INTERVAL_MINUTES` | No (default 30) | How often to scan during market hours |
@@ -48,11 +51,17 @@ Open `http://localhost:8000` — the dashboard is served from the same process.
 
 Scanner runs without Discord or Reddit configured — those features just silently skip.
 
-Alerts fire only after calibration is ready and a candidate enters a higher
-signal tier or improves materially. Names from the same scan are grouped into
-one capped digest. Stable readings do not repeat merely because 24 hours have
-elapsed. `DISCORD_WEBHOOK_URL` posts directly to its channel. If no webhook is
-set, `DISCORD_BOT_TOKEN` posts to `DISCORD_CHANNEL_ID`.
+Alerts fire only after calibration reaches the configured distinct-session
+minimum (five by default) and a candidate enters a higher signal tier or
+improves materially.
+Repeated intraday scans do not count as independent calibration samples. Names
+are grouped into a capped digest; overflow and failed deliveries remain in a
+durable outbox for a later scan. A fresher unsent transition for the same ticker
+replaces the stale Discord delivery while both signal events remain available
+for outcome measurement. Each digest includes a stable payload-derived batch ID
+so the rare replay after a crash is recognizable. Stable readings do not repeat
+merely because 24 hours have elapsed. `DISCORD_WEBHOOK_URL` posts directly to its
+channel. If no webhook is set, `DISCORD_BOT_TOKEN` posts to `DISCORD_CHANNEL_ID`.
 
 ## API endpoints
 
@@ -63,6 +72,7 @@ set, `DISCORD_BOT_TOKEN` posts to `DISCORD_CHANNEL_ID`.
 | POST | `/api/scan/run` | Trigger a manual scan; requires `X-Admin-Token` |
 | POST | `/api/scan/ticker/:symbol` | Scan one ticker on demand; requires `X-Admin-Token` |
 | GET | `/api/alerts` | Recent Discord alerts sent |
+| GET | `/api/health` | Service health plus credential-free Discord delivery status |
 
 ## Scoring model
 
@@ -82,8 +92,8 @@ set, `DISCORD_BOT_TOKEN` posts to `DISCORD_CHANNEL_ID`.
 ## Data limitations
 
 - Short interest normally updates twice monthly.
-- Call activity is compared with open interest until enough local observations
-  exist for a ticker-specific baseline.
+- Call activity is compared with open interest until at least five distinct,
+  completed trading sessions exist for a ticker-specific baseline.
 - Gamma and zero-gamma values are modelled proxies; they do not reveal actual
   dealer books.
 - Volume zones are ordinary price-volume clusters, not dark-pool prints.

@@ -32,10 +32,10 @@ fi
 
 REQUIRED_TABLE_COUNT="$(
   sqlite3 -batch -noheader "${TEMP_PATH}" \
-    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('scan_results', 'scan_runs');"
+    "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('scan_results', 'scan_runs', 'signal_events', 'alert_outbox');"
 )"
-if [[ "${REQUIRED_TABLE_COUNT}" != "2" ]]; then
-  print -u2 -- "Backup validation failed: required tables scan_results and scan_runs were not both present"
+if [[ "${REQUIRED_TABLE_COUNT}" != "4" ]]; then
+  print -u2 -- "Backup validation failed: required tables for scanner and alert outbox were not all present"
   exit 1
 fi
 

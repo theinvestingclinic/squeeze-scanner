@@ -26,7 +26,10 @@ class BackupDatabaseTests(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def create_database(self, table_names=("scan_results", "scan_runs")):
+    def create_database(
+        self,
+        table_names=("scan_results", "scan_runs", "signal_events", "alert_outbox"),
+    ):
         with sqlite3.connect(self.database) as connection:
             for table_name in table_names:
                 connection.execute(
@@ -74,10 +77,14 @@ class BackupDatabaseTests(unittest.TestCase):
                     "SELECT name FROM sqlite_master WHERE type = 'table'"
                 )
             }
-        self.assertTrue({"scan_results", "scan_runs"}.issubset(table_names))
+        self.assertTrue(
+            {"scan_results", "scan_runs", "signal_events", "alert_outbox"}.issubset(
+                table_names
+            )
+        )
 
     def test_missing_required_table_does_not_publish_backup(self):
-        self.create_database(("scan_results",))
+        self.create_database(("scan_results", "scan_runs", "signal_events"))
 
         result = self.run_backup()
 

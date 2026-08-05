@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     alert_digest_max_names: int = 5
     alert_material_score_change: float = 10
     alert_material_trigger_change: float = 8
+    alert_outbox_retry_minutes: int = 15
+    alert_outbox_permanent_retry_hours: int = 6
+    discord_max_attempts: int = 3
+    discord_retry_base_seconds: float = 0.5
+    discord_retry_max_seconds: float = 4.0
+    calibration_min_sessions: int = 5
     scan_interval_minutes: int = 30
     scan_history_days: int = 35
     enable_reddit_signal: bool = False

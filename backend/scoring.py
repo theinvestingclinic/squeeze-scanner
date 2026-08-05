@@ -1,5 +1,7 @@
 import math
 
+from config import settings
+
 
 def calculate_score(data: dict) -> tuple[float, dict]:
     """
@@ -158,6 +160,11 @@ def calculate_score(data: dict) -> tuple[float, dict]:
     # Missing data should read as "unknown", not "clear" or neutral.
 
     history_pts = hist.get("history_points", 0)
+    history_sessions = hist.get("history_sessions", 0)
+    calibration_min_sessions = hist.get(
+        "calibration_min_sessions",
+        settings.calibration_min_sessions,
+    )
     breakdown["_data_quality"] = {
         "has_short_data":   si > 0,
         "has_options_data": data.get("has_options_data", False),
@@ -165,7 +172,9 @@ def calculate_score(data: dict) -> tuple[float, dict]:
         "has_reddit_data":  data.get("reddit_data_available", False),
         "short_data_note":  "bi-weekly" if si > 0 else "unavailable",
         "history_points":   history_pts,
-        "signals_calibrated": history_pts >= 5,
+        "history_sessions": history_sessions,
+        "calibration_min_sessions": calibration_min_sessions,
+        "signals_calibrated": history_sessions >= calibration_min_sessions,
     }
 
     # ── TOTALS ────────────────────────────────────────────────────────────────

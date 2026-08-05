@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
 
-from database import Alert, ScanResult
+from database import Alert, ScanResult, SignalEvent
 
 
 def outcome_metrics(entry_price: float, prices: list[float]) -> dict:
@@ -21,36 +21,42 @@ def outcome_metrics(entry_price: float, prices: list[float]) -> dict:
     }
 
 
-def update_alert_outcomes(db: Session) -> int:
-    """Update 1/5-session returns and excursion for recent alert records."""
-    cutoff = datetime.utcnow() - timedelta(days=14)
-    alerts = db.query(Alert).filter(Alert.sent_at >= cutoff).all()
+def _update_records(
+    db: Session,
+    records: list,
+    *,
+    timestamp_attr: str,
+    price_attr: str,
+) -> int:
     updated = 0
 
-    for alert in alerts:
-        if not alert.price_at_alert:
+    for record in records:
+        event_time = getattr(record, timestamp_attr)
+        entry_price = getattr(record, price_attr)
+        if not entry_price:
             prior = (
                 db.query(ScanResult)
                 .filter(
-                    ScanResult.ticker == alert.ticker,
-                    ScanResult.scanned_at <= alert.sent_at,
+                    ScanResult.ticker == record.ticker,
+                    ScanResult.scanned_at <= event_time,
                     ScanResult.price > 0,
                 )
                 .order_by(ScanResult.scanned_at.desc())
                 .first()
             )
             if prior:
-                alert.price_at_alert = prior.price
+                setattr(record, price_attr, prior.price)
+                entry_price = prior.price
 
-        if not alert.price_at_alert:
+        if not entry_price:
             continue
 
         rows = (
             db.query(ScanResult)
             .filter(
-                ScanResult.ticker == alert.ticker,
-                ScanResult.scanned_at > alert.sent_at,
-                ScanResult.scanned_at <= alert.sent_at + timedelta(days=10),
+                ScanResult.ticker == record.ticker,
+                ScanResult.scanned_at > event_time,
+                ScanResult.scanned_at <= event_time + timedelta(days=10),
                 ScanResult.price > 0,
             )
             .order_by(ScanResult.scanned_at.asc())
@@ -58,15 +64,15 @@ def update_alert_outcomes(db: Session) -> int:
         )
         by_session = {}
         for row in rows:
-            if row.scanned_at.date() == alert.sent_at.date():
+            if row.scanned_at.date() == event_time.date():
                 continue
             by_session[row.scanned_at.date()] = row
         sessions = list(by_session.values())
         if not sessions:
             continue
 
-        if alert.return_1d is None:
-            alert.return_1d = outcome_metrics(alert.price_at_alert, [sessions[0].price]).get(
+        if record.return_1d is None:
+            record.return_1d = outcome_metrics(entry_price, [sessions[0].price]).get(
                 "last_return"
             )
 
@@ -74,16 +80,37 @@ def update_alert_outcomes(db: Session) -> int:
         if len(sessions) >= 5:
             fifth_session = sessions[4].scanned_at.date()
             evaluation_rows = [row for row in rows if row.scanned_at.date() <= fifth_session]
-        metrics = outcome_metrics(alert.price_at_alert, [row.price for row in evaluation_rows])
-        alert.max_favorable_5d = metrics.get("max_favorable")
-        alert.max_drawdown_5d = metrics.get("max_drawdown")
+        metrics = outcome_metrics(entry_price, [row.price for row in evaluation_rows])
+        record.max_favorable_5d = metrics.get("max_favorable")
+        record.max_drawdown_5d = metrics.get("max_drawdown")
 
         if len(sessions) >= 5:
-            alert.return_5d = outcome_metrics(alert.price_at_alert, [sessions[4].price]).get(
+            record.return_5d = outcome_metrics(entry_price, [sessions[4].price]).get(
                 "last_return"
             )
-            alert.evaluated_at = datetime.utcnow()
+            record.evaluated_at = datetime.utcnow()
         updated += 1
+
+    return updated
+
+
+def update_alert_outcomes(db: Session) -> int:
+    """Update returns for detected signals and successfully delivered alerts."""
+    cutoff = datetime.utcnow() - timedelta(days=14)
+    alerts = db.query(Alert).filter(Alert.sent_at >= cutoff).all()
+    signals = db.query(SignalEvent).filter(SignalEvent.detected_at >= cutoff).all()
+    updated = _update_records(
+        db,
+        alerts,
+        timestamp_attr="sent_at",
+        price_attr="price_at_alert",
+    )
+    updated += _update_records(
+        db,
+        signals,
+        timestamp_attr="detected_at",
+        price_attr="price_at_signal",
+    )
 
     if updated:
         db.commit()

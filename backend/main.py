@@ -195,8 +195,14 @@ def _result_is_current_eligible(r: ScanResult) -> bool:
 # ── Routes ───────────────────────────────────────────────────────────────────
 
 @app.get("/api/health")
-def health():
-    return {"status": "ok", "time": datetime.utcnow().isoformat()}
+def health(db: Session = Depends(get_db)):
+    from alert_delivery import get_alert_health
+
+    return {
+        "status": "ok",
+        "time": datetime.utcnow().isoformat(),
+        "discord_alerts": get_alert_health(db),
+    }
 
 
 @app.get("/api/scan")
