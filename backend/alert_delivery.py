@@ -37,6 +37,7 @@ _PAYLOAD_FIELDS = (
     "volume_zones",
     "relative_volume",
     "reddit_saturation",
+    "signal_state",
 )
 
 
@@ -168,16 +169,65 @@ def _delivery_retry_at(now: datetime, result: DiscordSendResult) -> datetime:
     return now + timedelta(seconds=seconds)
 
 
+def _digest_payloads(
+    selected: list[tuple[AlertOutbox, SignalEvent]],
+    current_candidates: list[dict] | None,
+    limit: int,
+) -> list[dict]:
+    """Keep every queued event, then fill the digest with the current shortlist."""
+    current_payloads = [_signal_payload(item) for item in current_candidates or []]
+    current_by_ticker = {
+        str(item.get("ticker", "")).upper(): item
+        for item in current_payloads
+        if item.get("ticker")
+    }
+
+    payloads = []
+    included_tickers = set()
+    for _, event in selected:
+        stored = json.loads(event.payload)
+        stored.setdefault(
+            "signal_state",
+            "active_trigger" if event.tier == 2 else "setup_watch",
+        )
+        ticker = str(stored.get("ticker", event.ticker)).upper()
+        # Prefer fresh scan values when the transitioned name remains on the
+        # current shortlist; otherwise retain the durable event snapshot.
+        payloads.append(current_by_ticker.get(ticker, stored))
+        included_tickers.add(ticker)
+
+    for item in current_payloads:
+        ticker = str(item.get("ticker", "")).upper()
+        if not ticker or ticker in included_tickers:
+            continue
+        payloads.append(item)
+        included_tickers.add(ticker)
+        if len(payloads) >= limit:
+            break
+
+    state_rank = {"active_trigger": 2, "setup_watch": 1, "monitor": 0}
+    payloads.sort(
+        key=lambda item: (
+            state_rank.get(str(item.get("signal_state", "")), 1),
+            float(item.get("score", 0) or 0),
+        ),
+        reverse=True,
+    )
+    return payloads[:limit]
+
+
 async def deliver_pending_alerts(
     db: Session,
     alert_threshold: int,
+    current_candidates: list[dict] | None = None,
 ) -> int:
-    """Deliver at most one capped digest and durably update every selected row."""
+    """Deliver one ranked shortlist and durably update its triggering events."""
     if not discord_is_configured():
         return 0
 
     now = datetime.utcnow()
-    rows = _due_outbox_rows(db, now, settings.alert_digest_max_names)
+    digest_limit = max(1, settings.alert_digest_max_names)
+    rows = _due_outbox_rows(db, now, digest_limit)
     if not rows:
         return 0
 
@@ -192,7 +242,7 @@ async def deliver_pending_alerts(
     if not selected:
         return 0
 
-    payloads = [json.loads(event.payload) for _, event in selected]
+    payloads = _digest_payloads(selected, current_candidates, digest_limit)
     result = await send_discord_digest_result(payloads, alert_threshold)
     attempted_at = datetime.utcnow()
 

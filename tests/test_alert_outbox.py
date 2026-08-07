@@ -186,6 +186,35 @@ class AlertOutboxTests(unittest.TestCase):
         self.assertEqual(self.session.query(AlertOutbox).filter_by(status="pending").count(), 0)
         self.assertEqual(self.session.query(Alert).count(), 7)
 
+    def test_single_transition_is_filled_with_current_ranked_shortlist(self):
+        self.enqueue("AAA", 10, score=76, tier=2)
+        current = [
+            {**self.signal("BBB", 70), "signal_state": "setup_watch"},
+            {**self.signal("CCC", 60), "signal_state": "monitor"},
+            {**self.signal("AAA", 78), "signal_state": "active_trigger"},
+        ]
+        success = DiscordSendResult(success=True, attempted=True, attempts=1)
+
+        with patch.object(alert_delivery, "discord_is_configured", return_value=True):
+            with patch.object(
+                alert_delivery,
+                "send_discord_digest_result",
+                return_value=success,
+            ) as send:
+                delivered = asyncio.run(
+                    alert_delivery.deliver_pending_alerts(
+                        self.session,
+                        75,
+                        current_candidates=current,
+                    )
+                )
+
+        payloads = send.call_args.args[0]
+        self.assertEqual(delivered, 1)
+        self.assertEqual([item["ticker"] for item in payloads], ["AAA", "BBB", "CCC"])
+        self.assertEqual(payloads[0]["score"], 78)
+        self.assertEqual(self.session.query(AlertOutbox).filter_by(status="sent").count(), 1)
+
     def test_failed_delivery_is_retried_on_later_scan(self):
         self.enqueue("AAA", 10)
         failure = DiscordSendResult(

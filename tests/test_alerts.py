@@ -14,7 +14,12 @@ sys.path.insert(0, str(BACKEND))
 
 import alerts
 from eligibility import ELIGIBLE_COMMON_STOCK
-from scanner import is_material_transition, material_transition_type, should_send_alert
+from scanner import (
+    build_digest_shortlist,
+    is_material_transition,
+    material_transition_type,
+    should_send_alert,
+)
 
 
 class DiscordDestinationTests(unittest.TestCase):
@@ -69,6 +74,17 @@ class DiscordDigestTests(unittest.TestCase):
         self.assertEqual(self.batch_line(message), self.batch_line(same_payload))
         self.assertNotEqual(self.batch_line(message), self.batch_line(changed_payload))
         self.assertRegex(self.batch_line(message), r"^Batch ID: `sqz-[0-9a-f]{12}`$")
+
+    def test_digest_distinguishes_monitor_context_from_alert_names(self):
+        setup = self.item("AAA", 70)
+        setup["signal_state"] = "setup_watch"
+        monitor = self.item("BBB", 65)
+        monitor["signal_state"] = "monitor"
+
+        message = alerts.format_digest([setup, monitor], 75)
+
+        self.assertIn("**$AAA — Setup watch**", message)
+        self.assertIn("**$BBB — Monitor**", message)
 
     def test_oversized_digest_fails_before_any_network_client_is_created(self):
         items = [self.item("X" * alerts.DISCORD_DIGEST_MAX_CHARS)]
@@ -267,6 +283,20 @@ class AlertGateTests(unittest.TestCase):
             material_transition_type(current, previous, 75),
             "tier_upgrade",
         )
+
+    def test_shortlist_includes_ranked_monitors_below_relative_volume_gate(self):
+        setup = self.wen_style_result()
+        setup["ticker"] = "SETUP"
+        monitor = self.wen_style_result()
+        monitor["ticker"] = "MON"
+        monitor["score"] = 53
+        monitor["relative_volume"] = 1
+
+        shortlist = build_digest_shortlist([monitor, setup], 75, 5)
+
+        self.assertEqual([item["ticker"] for item in shortlist], ["SETUP", "MON"])
+        self.assertEqual(shortlist[0]["signal_state"], "setup_watch")
+        self.assertEqual(shortlist[1]["signal_state"], "monitor")
 
 
 if __name__ == "__main__":

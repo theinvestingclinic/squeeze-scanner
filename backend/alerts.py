@@ -148,12 +148,20 @@ def _digest_batch_marker(items: list[dict], alert_threshold: int) -> str:
 
 def format_digest(items: list[dict], alert_threshold: int) -> str:
     lines = [
-        "**Squeeze Scanner — material state changes**",
-        "*Calibrated candidates only; research signals, not trade recommendations.*",
+        "**Squeeze Scanner — current ranked shortlist**",
+        "*A material change triggered this update; calibrated names are included for member context.*",
         "",
     ]
     for data in items:
-        state = "Active trigger" if data.get("score", 0) >= alert_threshold else "Setup watch"
+        signal_state = data.get("signal_state")
+        if signal_state == "active_trigger":
+            state = "Active trigger"
+        elif signal_state == "monitor":
+            state = "Monitor"
+        elif signal_state == "setup_watch":
+            state = "Setup watch"
+        else:
+            state = "Active trigger" if data.get("score", 0) >= alert_threshold else "Setup watch"
         lines.append(
             f"**${data.get('ticker', '???')} — {state}** · "
             f"{data.get('score', 0)}/100 · "

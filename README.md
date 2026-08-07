@@ -10,7 +10,7 @@ Answers one question: **Where is market structure pressure building?**
 | Gamma map | Options-open-interest gamma proxy, call wall, put wall, and zero-gamma estimate |
 | Squeeze score | 0–100 model: short interest + float + gamma + options fuel + confirmation |
 | Volume zones | 30-day volume profile clusters (dark pool proxy until UW API added) |
-| Discord alerts | One capped digest for calibrated, material state transitions |
+| Discord alerts | One ranked member shortlist when a calibrated material transition occurs |
 
 ## Quick start
 
@@ -40,7 +40,7 @@ Open `http://localhost:8000` — the dashboard is served from the same process.
 | `ALERT_MIN_SHORT_INTEREST_PCT` | No (default 20) | Minimum short interest required for potential-squeeze alerts |
 | `ALERT_MIN_RELATIVE_VOLUME` | No (default 2) | Minimum relative volume required for potential-squeeze alerts |
 | `ALERT_REQUIRE_CALIBRATION` | No (default true) | Blocks alerts until enough distinct prior trading sessions exist |
-| `ALERT_DIGEST_MAX_NAMES` | No (default 5) | Maximum names in one transition digest |
+| `ALERT_DIGEST_MAX_NAMES` | No (default 5) | Maximum names in one ranked member shortlist |
 | `CALIBRATION_MIN_SESSIONS` | No (default 5) | Distinct completed trading sessions required for signal calibration |
 | `DISCORD_MAX_ATTEMPTS` | No (default 3) | Bounded attempts for rate limits, server errors, and network failures |
 | `ALERT_OUTBOX_RETRY_MINUTES` | No (default 15) | Minimum delay before a failed digest is retried by a later scan |
@@ -53,7 +53,9 @@ Scanner runs without Discord or Reddit configured — those features just silent
 
 Alerts fire only after calibration reaches the configured distinct-session
 minimum (five by default) and a candidate enters a higher signal tier or
-improves materially.
+improves materially. Each triggered Discord post includes up to five ranked
+current candidates, using strong calibrated monitor names to fill the list when
+only one or two names changed state.
 Repeated intraday scans do not count as independent calibration samples. Names
 are grouped into a capped digest; overflow and failed deliveries remain in a
 durable outbox for a later scan. A fresher unsent transition for the same ticker

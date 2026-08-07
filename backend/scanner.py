@@ -185,6 +185,55 @@ def signal_tier(data: dict, alert_threshold: int | None = None) -> int:
     return 2 if data.get("score", 0) >= threshold else 1
 
 
+def is_digest_candidate(data: dict) -> bool:
+    """Allow reliable calibrated names to provide context below the alert gate."""
+    if data.get("eligibility_status") != ELIGIBLE_COMMON_STOCK:
+        return False
+    if data.get("setup_score", 0) < settings.alert_min_setup_score:
+        return False
+    if data.get("trigger_score", 0) < settings.alert_min_trigger_score:
+        return False
+    if data.get("short_interest_pct", 0) <= 0:
+        return False
+
+    breakdown = data.get("score_breakdown") or {}
+    if breakdown.get("already_squeezed", 0) < 0:
+        return False
+    quality = breakdown.get("_data_quality") or {}
+    if not quality.get("has_short_data", False):
+        return False
+    if settings.alert_require_calibration and not quality.get("signals_calibrated", False):
+        return False
+    return True
+
+
+def build_digest_shortlist(
+    results: list[dict],
+    alert_threshold: int,
+    limit: int,
+) -> list[dict]:
+    """Return ranked alert names plus strong monitors for member context."""
+    shortlist = []
+    for data in results:
+        if not is_digest_candidate(data):
+            continue
+        item = dict(data)
+        tier = signal_tier(item, alert_threshold)
+        item["signal_state"] = (
+            "active_trigger" if tier == 2 else "setup_watch" if tier == 1 else "monitor"
+        )
+        shortlist.append(item)
+
+    shortlist.sort(
+        key=lambda item: (
+            signal_tier(item, alert_threshold),
+            item.get("score", 0),
+        ),
+        reverse=True,
+    )
+    return shortlist[: max(1, limit)]
+
+
 def _row_as_signal(row: ScanResult) -> dict:
     try:
         breakdown = json.loads(row.score_breakdown or "{}")
@@ -331,7 +380,16 @@ async def run_full_scan(alert_threshold: int = 75) -> list[dict]:
         db.commit()
 
         try:
-            await deliver_pending_alerts(db, alert_threshold)
+            current_shortlist = build_digest_shortlist(
+                results,
+                alert_threshold,
+                settings.alert_digest_max_names,
+            )
+            await deliver_pending_alerts(
+                db,
+                alert_threshold,
+                current_candidates=current_shortlist,
+            )
         except Exception as exc:
             # Signal/outbox rows are already committed. A later scan can retry.
             log.warning(
